@@ -1,6 +1,7 @@
 """Streamlit entrypoint for the CLARITY Patient Explainer Dashboard prototype."""
 
 import json
+from html import escape
 from pathlib import Path
 
 import streamlit as st
@@ -13,6 +14,300 @@ FACT_BASE_PATH = DATA_DIR / "extracted_fact_base.json"
 VERSION_METADATA_PATH = DATA_DIR / "version_metadata.json"
 WRITEUP_DIR = APP_ROOT / "writeup"
 LIMITATIONS_PATH = WRITEUP_DIR / "limitations_and_next_steps.md"
+
+
+def inject_custom_css() -> None:
+    """Apply lightweight visual styling for the Streamlit prototype.
+
+    Args:
+        None.
+
+    Returns:
+        None. CSS is injected into the Streamlit page as a rendering side
+        effect.
+
+    CLARITY pipeline role:
+        Improves the interview demo experience without changing the underlying
+        prototype data flow. The CSS creates clearer hierarchy, workflow
+        markers, compact fact cards, and a more intentional placeholder style so
+        evaluators can understand the CLARITY flow quickly.
+    """
+    st.markdown(
+        """
+<style>
+    .block-container {
+        max-width: 1180px;
+        padding-top: 1.6rem;
+        padding-bottom: 3rem;
+    }
+
+    h1 {
+        color: #12343b;
+        letter-spacing: 0;
+        margin-bottom: 0.2rem;
+    }
+
+    h2, h3 {
+        color: #16323b;
+        letter-spacing: 0;
+    }
+
+    .clarity-hero {
+        border: 1px solid #d9e2e7;
+        border-left: 6px solid #2b7a78;
+        background: linear-gradient(135deg, #f7fbfb 0%, #ffffff 62%);
+        padding: 1.1rem 1.25rem;
+        border-radius: 8px;
+        margin: 1rem 0 1.1rem 0;
+    }
+
+    .clarity-hero-title {
+        color: #12343b;
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .clarity-hero-text {
+        color: #38545c;
+        font-size: 0.95rem;
+        line-height: 1.45;
+        margin: 0;
+    }
+
+    .workflow-strip {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.55rem;
+        margin: 0.5rem 0 1.35rem 0;
+    }
+
+    .workflow-step {
+        border: 1px solid #dbe5e8;
+        background: #fbfcfd;
+        border-radius: 8px;
+        padding: 0.7rem 0.75rem;
+        min-height: 76px;
+    }
+
+    .workflow-step-number {
+        color: #2b7a78;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .workflow-step-title {
+        color: #16323b;
+        font-size: 0.88rem;
+        font-weight: 650;
+        line-height: 1.25;
+    }
+
+    .step-heading {
+        border-bottom: 1px solid #d9e2e7;
+        margin: 0.15rem 0 1rem 0;
+        padding-bottom: 0.65rem;
+    }
+
+    .step-kicker {
+        color: #2b7a78;
+        font-size: 0.78rem;
+        font-weight: 750;
+        text-transform: uppercase;
+        margin-bottom: 0.15rem;
+    }
+
+    .step-title {
+        color: #12343b;
+        font-size: 1.28rem;
+        font-weight: 750;
+        margin-bottom: 0.2rem;
+    }
+
+    .step-summary {
+        color: #526b73;
+        font-size: 0.94rem;
+        line-height: 1.45;
+        margin: 0;
+    }
+
+    .fact-card {
+        border: 1px solid #d9e2e7;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 0.85rem 0.9rem;
+        min-height: 96px;
+        margin-bottom: 0.7rem;
+    }
+
+    .fact-label {
+        color: #60777f;
+        font-size: 0.72rem;
+        font-weight: 750;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .fact-value {
+        color: #17333b;
+        font-size: 0.96rem;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .compact-list ul {
+        margin-top: 0.25rem;
+        padding-left: 1.05rem;
+    }
+
+    .compact-list li {
+        margin-bottom: 0.3rem;
+    }
+
+    .muted-note {
+        color: #526b73;
+        font-size: 0.88rem;
+        line-height: 1.4;
+    }
+
+    .mode-summary {
+        border: 1px solid #d9e2e7;
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .mode-title {
+        color: #12343b;
+        font-size: 1.15rem;
+        font-weight: 750;
+        margin-bottom: 0.35rem;
+    }
+
+    .video-placeholder {
+        border: 1px dashed #8ab7b5;
+        background: #f6fbfb;
+        border-radius: 8px;
+        padding: 1.15rem;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .video-placeholder-title {
+        color: #12343b;
+        font-weight: 750;
+        font-size: 1rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .video-placeholder-text {
+        color: #526b73;
+        line-height: 1.45;
+        margin: 0;
+    }
+
+    @media (max-width: 900px) {
+        .workflow-strip {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+def render_workflow_strip() -> None:
+    """Render the five-step CLARITY workflow as a compact visual map.
+
+    Args:
+        None.
+
+    Returns:
+        None. The workflow strip is rendered directly into the page.
+
+    CLARITY pipeline role:
+        Gives evaluators a clear mental model of the prototype before they
+        interact with any controls. This makes the app feel like a guided
+        workflow rather than a loose collection of dashboard panels.
+    """
+    steps = [
+        "Import Clinical Note",
+        "Review Shared Fact Base",
+        "Choose Explanation Mode",
+        "Review Script and Cached Video",
+        "Transparency and Next Steps",
+    ]
+    step_html = "\n".join(
+        f"""
+        <div class="workflow-step">
+            <div class="workflow-step-number">Step {index}</div>
+            <div class="workflow-step-title">{escape(title)}</div>
+        </div>
+        """
+        for index, title in enumerate(steps, start=1)
+    )
+    st.markdown(
+        f'<div class="workflow-strip">{step_html}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_step_header(step_number: int, title: str, summary: str) -> None:
+    """Render a consistent heading for each workflow step.
+
+    Args:
+        step_number: Numeric position in the CLARITY prototype workflow.
+        title: Short step title displayed to the evaluator.
+        summary: One-sentence explanation of what the step demonstrates.
+
+    Returns:
+        None. The heading is rendered directly into the page.
+
+    CLARITY pipeline role:
+        Creates consistent navigation cues across the dashboard so the demo
+        reads as an end-to-end patient explainer pipeline.
+    """
+    st.markdown(
+        f"""
+        <div class="step-heading">
+            <div class="step-kicker">Step {step_number}</div>
+            <div class="step-title">{escape(title)}</div>
+            <p class="step-summary">{escape(summary)}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_fact_card(label: str, value: str) -> None:
+    """Render a compact labeled fact card.
+
+    Args:
+        label: The short label for the fact.
+        value: The fact value to display.
+
+    Returns:
+        None. The card is rendered directly into the page.
+
+    CLARITY pipeline role:
+        Makes the shared fact base easier to scan by turning dense clinical
+        fields into consistent, patient-facing units.
+    """
+    st.markdown(
+        f"""
+        <div class="fact-card">
+            <div class="fact-label">{escape(label)}</div>
+            <div class="fact-value">{escape(value)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def load_json(path: Path) -> dict:
@@ -124,18 +419,27 @@ def handle_case_import(sample_path: Path) -> tuple[str, str]:
         text and markdown so the demo stays lightweight; structured fact
         extraction is handled separately in later steps.
     """
-    st.subheader("Step 1. Import Clinical Note")
-    st.write(
-        "Start by loading a de-identified note. For the interview demo, use the "
-        "built-in sample note or upload a local `.txt` / `.md` file."
+    render_step_header(
+        1,
+        "Import Clinical Note",
+        "Load a de-identified note from the sample case or from a local text file.",
     )
 
-    use_sample = st.checkbox("Use sample de-identified case note", value=True)
-    uploaded_file = st.file_uploader(
-        "Upload a de-identified clinical note",
-        type=["txt", "md"],
-        help="Current prototype supports plain text and markdown files.",
-    )
+    sample_col, upload_col = st.columns([1, 1], gap="large")
+    with sample_col:
+        st.markdown("**Built-in demo case**")
+        st.caption("Best for a fast interview walkthrough.")
+        use_sample = st.checkbox("Use sample de-identified case note", value=True)
+
+    with upload_col:
+        st.markdown("**Upload local note**")
+        st.caption("Supports `.txt` and `.md` files for this prototype.")
+        uploaded_file = st.file_uploader(
+            "Upload a de-identified clinical note",
+            type=["txt", "md"],
+            help="Current prototype supports plain text and markdown files.",
+            label_visibility="collapsed",
+        )
 
     if uploaded_file is not None:
         raw_bytes = uploaded_file.getvalue()
@@ -168,11 +472,12 @@ def display_safety_notice() -> None:
         fact review, script presentation, and cached video display should all be
         understood as materials requiring clinician review before real use.
     """
-    st.warning(
-        "Prototype safety note: this dashboard is for demonstration and patient "
-        "education design only. It is not medical advice, and final content "
-        "should be reviewed by clinicians before patient-facing use."
-    )
+    with st.expander("Prototype safety notice", expanded=False):
+        st.warning(
+            "This dashboard is for demonstration and patient education design "
+            "only. It is not medical advice, and final content should be "
+            "reviewed by clinicians before patient-facing use."
+        )
 
 
 def display_demo_overview() -> None:
@@ -189,10 +494,18 @@ def display_demo_overview() -> None:
         of the demo. The overview anchors the app as a workflow demonstration
         rather than a standalone video player or generic dashboard.
     """
-    st.info(
-        "Demo flow: import a de-identified note, review the shared fact base, "
-        "choose one of five explanation modes, then review the selected script, "
-        "cached video slot, transparency notes, and limitations."
+    st.markdown(
+        """
+        <div class="clarity-hero">
+            <div class="clarity-hero-title">Patient-facing explainer workflow</div>
+            <p class="clarity-hero-text">
+                Import a de-identified note, review the shared fact base, choose
+                one of five communication modes, then inspect the selected script,
+                cached video slot, transparency notes, and limitations.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 
@@ -211,7 +524,11 @@ def display_case_snapshot(fact_base: dict) -> None:
         same fact base so tone, language, and uncertainty framing can vary
         without allowing facts to drift between versions.
     """
-    st.subheader("Step 2. Review Shared Fact Base")
+    render_step_header(
+        2,
+        "Review Shared Fact Base",
+        "Inspect the clinician-verifiable facts that anchor every explanation version.",
+    )
     st.info(
         "For this prototype, the structured fact base is loaded from a "
         "pre-verified JSON file. In a production workflow, this step would be "
@@ -231,25 +548,36 @@ def display_case_snapshot(fact_base: dict) -> None:
     )
 
     diagnosis_col, stage_col, age_col = st.columns(3)
-    diagnosis_col.metric("Diagnosis", fact_base.get("diagnosis", "Not available"))
-    stage_col.metric("Stage", fact_base.get("stage", "Not available"))
-    age_col.metric("Patient age", fact_base.get("patient_age", "Not available"))
+    with diagnosis_col:
+        render_fact_card("Diagnosis", fact_base.get("diagnosis", "Not available"))
+    with stage_col:
+        render_fact_card("Stage", fact_base.get("stage", "Not available"))
+    with age_col:
+        render_fact_card("Patient age", fact_base.get("patient_age", "Not available"))
 
     area_col, treatment_col = st.columns(2)
     with area_col:
         st.markdown("**Main areas involved**")
+        st.markdown('<div class="compact-list">', unsafe_allow_html=True)
         for area in fact_base.get("main_areas_involved", []):
             st.markdown(f"- {area}")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with treatment_col:
-        st.markdown("**Current treatment**")
-        st.write(fact_base.get("current_treatment", "Not available"))
-        st.markdown("**Recommended next treatment**")
-        st.write(fact_base.get("recommended_next_treatment", "Not available"))
+        render_fact_card(
+            "Current treatment",
+            fact_base.get("current_treatment", "Not available"),
+        )
+        render_fact_card(
+            "Recommended next treatment",
+            fact_base.get("recommended_next_treatment", "Not available"),
+        )
 
     st.markdown("**Key uncertainty / monitoring points**")
+    st.markdown('<div class="compact-list">', unsafe_allow_html=True)
     for point in fact_base.get("uncertainty_points", []):
         st.markdown(f"- {point}")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def display_key_takeaways(fact_base: dict) -> None:
@@ -266,7 +594,7 @@ def display_key_takeaways(fact_base: dict) -> None:
         structured facts used by every explanation mode. This gives evaluators
         a stable reference point before they compare style-controlled scripts.
     """
-    st.markdown("### Key Takeaways")
+    st.markdown("**Key Takeaways**")
     takeaways = fact_base.get("key_takeaways", [])
     if not takeaways:
         st.warning("No key takeaways are available in the shared fact base.")
@@ -290,7 +618,7 @@ def display_questions_for_care_team(fact_base: dict) -> None:
         questions are educational and preparatory, not direct medical advice,
         which helps keep the prototype aligned with its patient education role.
     """
-    st.markdown("### Questions for Your Care Team")
+    st.markdown("**Questions for Your Care Team**")
     questions = fact_base.get("questions_for_care_team", [])
     if not questions:
         st.warning("No care team questions are available in the shared fact base.")
@@ -316,14 +644,25 @@ def display_version_metadata(metadata: dict) -> None:
         selected mode changes how an explanation is presented, but it should not
         change the underlying shared clinical facts loaded in Step 2.
     """
-    st.subheader("Step 3. Choose Explanation Mode")
+    render_step_header(
+        3,
+        "Choose Explanation Mode",
+        "Compare how the same facts can be presented with different communication goals.",
+    )
 
     if not metadata:
         st.warning("No explanation mode metadata is available yet.")
         return
 
-    st.markdown(f"### {metadata.get('title', 'Selected version')}")
-    st.write(metadata.get("communication_goal", "No communication goal provided."))
+    st.markdown(
+        f"""
+        <div class="mode-summary">
+            <div class="mode-title">{escape(metadata.get('title', 'Selected version'))}</div>
+            <div class="muted-note">{escape(metadata.get('communication_goal', 'No communication goal provided.'))}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     language_col, tone_col = st.columns(2)
     language_col.markdown(f"**Language:** {metadata.get('language', 'Not available')}")
@@ -439,7 +778,10 @@ def display_personalization_summary(preferences: dict) -> None:
         for preference in selected_preferences:
             st.markdown(f"- {preference}")
     else:
-        st.write("No future personalization preferences selected.")
+        st.markdown(
+            '<p class="muted-note">No future personalization preferences selected.</p>',
+            unsafe_allow_html=True,
+        )
 
     st.caption(
         "Preference controls are placeholders only; the selected predefined "
@@ -500,12 +842,19 @@ def display_video_or_placeholder(video_path: Path) -> None:
     # Missing cached video files are expected at this prototype stage. The
     # fallback should look deliberate so evaluators understand the dashboard is
     # prepared for videos, not broken by their absence.
-    st.info(
-        "Video not generated yet.\n\n"
-        "This space will display the 5-10 minute NotebookLM-style explainer "
-        "video for the selected version.\n\n"
-        "For the current prototype, the dashboard is prepared to host the "
-        "generated video once available."
+    st.markdown(
+        """
+        <div class="video-placeholder">
+            <div class="video-placeholder-title">Video not generated yet</div>
+            <p class="video-placeholder-text">
+                This space will display the 5-10 minute NotebookLM-style
+                explainer video for the selected version. For the current
+                prototype, the dashboard is prepared to host the generated video
+                once available.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 
@@ -619,6 +968,7 @@ def main() -> None:
         page_title="CLARITY Patient Explainer Dashboard",
         layout="wide",
     )
+    inject_custom_css()
 
     st.title("CLARITY Patient Explainer Dashboard")
     st.caption(
@@ -632,8 +982,10 @@ def main() -> None:
     )
 
     display_demo_overview()
+    render_workflow_strip()
     display_safety_notice()
 
+    st.divider()
     case_status, note_text = handle_case_import(SAMPLE_NOTE_PATH)
 
     st.markdown(f"**Current case status:** {case_status}")
@@ -647,6 +999,7 @@ def main() -> None:
                 label_visibility="collapsed",
             )
 
+    st.divider()
     version_metadata = load_json(VERSION_METADATA_PATH)
     selected_mode_key, selected_mode_metadata = select_explanation_mode(
         version_metadata
@@ -661,23 +1014,37 @@ def main() -> None:
             display_key_takeaways(fact_base)
         with question_col:
             display_questions_for_care_team(fact_base)
+
+    st.divider()
     display_version_metadata(selected_mode_metadata)
     display_personalization_summary(personalization_preferences)
 
-    st.subheader("Step 4. Review Script and Cached Video")
+    st.divider()
+    render_step_header(
+        4,
+        "Review Script and Cached Video",
+        "Open the selected transcript and confirm the video slot is ready for cached generated media.",
+    )
     script_file = selected_mode_metadata.get("script_file") if selected_mode_metadata else ""
-    if script_file:
-        display_script(APP_ROOT / script_file)
-    else:
-        st.warning("No script file is configured for the selected mode.")
-
     video_file = selected_mode_metadata.get("video_file") if selected_mode_metadata else ""
-    if video_file:
-        display_video_or_placeholder(APP_ROOT / video_file)
-    else:
-        st.warning("No video file is configured for the selected mode.")
+    script_col, video_col = st.columns([1.05, 0.95], gap="large")
+    with script_col:
+        if script_file:
+            display_script(APP_ROOT / script_file)
+        else:
+            st.warning("No script file is configured for the selected mode.")
+    with video_col:
+        if video_file:
+            display_video_or_placeholder(APP_ROOT / video_file)
+        else:
+            st.warning("No video file is configured for the selected mode.")
 
-    st.subheader("Step 5. Review Pipeline Transparency, Limitations, and Next Steps")
+    st.divider()
+    render_step_header(
+        5,
+        "Review Pipeline Transparency, Limitations, and Next Steps",
+        "Show how the prototype was generated and what must happen before real patient-facing use.",
+    )
     display_demo_guide()
     display_pipeline_transparency()
     display_limitations(LIMITATIONS_PATH)
