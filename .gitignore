@@ -1,0 +1,19 @@
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.streamlit/secrets.toml
+.env
+.venv/
+venv/
+env/
+*.log
+
+# Keep source-controlled placeholder directories, but avoid committing large generated media by default.
+videos/*.mp4
+videos/*.mov
+videos/*.webm
+!videos/.gitkeep
