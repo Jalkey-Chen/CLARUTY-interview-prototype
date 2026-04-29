@@ -11,6 +11,8 @@ DATA_DIR = APP_ROOT / "data"
 SAMPLE_NOTE_PATH = DATA_DIR / "sample_case_note.txt"
 FACT_BASE_PATH = DATA_DIR / "extracted_fact_base.json"
 VERSION_METADATA_PATH = DATA_DIR / "version_metadata.json"
+WRITEUP_DIR = APP_ROOT / "writeup"
+LIMITATIONS_PATH = WRITEUP_DIR / "limitations_and_next_steps.md"
 
 
 def load_json(path: Path) -> dict:
@@ -520,6 +522,33 @@ def display_pipeline_transparency() -> None:
         )
 
 
+def display_limitations(writeup_path: Path) -> None:
+    """Display limitations and next steps from a maintained markdown writeup.
+
+    Args:
+        writeup_path: Path to the limitations and next steps markdown file.
+
+    Returns:
+        None. The writeup is rendered inside a Streamlit expander.
+
+    CLARITY pipeline role:
+        Completes the limitations portion of Step 5 by making prototype
+        boundaries explicit. This is important for an interview demo because it
+        distinguishes the current local dashboard from a clinically deployable
+        production system that would require verification, audit trails,
+        privacy controls, translation review, and comprehension testing.
+    """
+    with st.expander("Limitations and next steps", expanded=False):
+        writeup = load_markdown(writeup_path)
+        if writeup:
+            st.markdown(writeup)
+        else:
+            st.warning(
+                "Limitations writeup is not available. Add the markdown file "
+                "under `writeup/` so evaluators can review prototype boundaries."
+            )
+
+
 def main() -> None:
     """Render the CLARITY Streamlit application shell.
 
@@ -601,6 +630,7 @@ def main() -> None:
 
     st.subheader("Step 5. Review Pipeline Transparency, Limitations, and Next Steps")
     display_pipeline_transparency()
+    display_limitations(LIMITATIONS_PATH)
 
 
 if __name__ == "__main__":
