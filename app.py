@@ -22,7 +22,9 @@ from src.clarity_dashboard.config import (
     VERSION_METADATA_PATH,
 )
 from src.clarity_dashboard.env_config import (
+    api_calls_enabled,
     display_api_config_status,
+    endpoint_is_placeholder,
     load_environment_config,
 )
 from src.clarity_dashboard.io_utils import load_json
@@ -48,6 +50,55 @@ from src.clarity_dashboard.ui import (
     render_workflow_strip,
     select_explanation_mode,
 )
+
+
+def api_endpoint_ready(api_config: dict, endpoint_name: str) -> bool:
+    """Return whether an API endpoint is ready for the UI to call.
+
+    Args:
+        api_config: Environment-derived API configuration.
+        endpoint_name: Name of the endpoint environment variable.
+
+    Returns:
+        True when live API calls are enabled and the endpoint is configured with
+        a non-template URL.
+
+    CLARITY pipeline role:
+        Lets the Streamlit workflow show one clear setup message instead of
+        calling placeholder endpoints and producing repeated low-level network
+        errors.
+    """
+    endpoint_url = api_config.get(endpoint_name, "")
+    return (
+        api_calls_enabled(api_config)
+        and bool(endpoint_url)
+        and not endpoint_is_placeholder(endpoint_url)
+    )
+
+
+def display_api_setup_needed(step_name: str, endpoint_name: str) -> None:
+    """Explain why uploaded-case API mode is waiting for backend setup.
+
+    Args:
+        step_name: Human-readable workflow step name.
+        endpoint_name: Required endpoint environment variable name.
+
+    Returns:
+        None. The setup explanation is rendered directly into Streamlit.
+
+    CLARITY pipeline role:
+        Makes API mode understandable for evaluators: uploaded cases are routed
+        to real services by design, but those services must be configured before
+        generated facts, scripts, or videos can appear.
+    """
+    st.info(
+        f"{step_name} is waiting for a backend API connection. Because you "
+        "uploaded your own document, the app will not use the sample demo data. "
+        f"To run this step, set `{endpoint_name}` in `.env`, set "
+        "`CLARITY_ENABLE_API_CALLS=true`, and start the matching backend "
+        "service. To see the static demo immediately, use the built-in sample "
+        "case instead."
+    )
 
 
 def render_fact_base_step(
@@ -78,6 +129,15 @@ def render_fact_base_step(
     if pipeline_mode == "demo":
         fact_base = load_json(FACT_BASE_PATH)
     elif pipeline_mode == "api" and note_hash:
+        if not api_endpoint_ready(api_config, "FACT_EXTRACTION_API_URL"):
+            display_api_setup_needed(
+                "Step 2 fact extraction",
+                "FACT_EXTRACTION_API_URL",
+            )
+            fact_base = {}
+            display_case_snapshot(fact_base, pipeline_mode)
+            return fact_base
+
         fact_cache_key = (
             f"api_fact_base:{note_hash}:{api_config.get('FACT_EXTRACTION_API_URL', '')}"
         )
@@ -123,6 +183,8 @@ def render_uploaded_case_ingestion(
         while preserving the current local demo flow for the sample case.
     """
     if pipeline_mode != "api" or not note_hash:
+        return
+    if not api_endpoint_ready(api_config, "NOTE_INGESTION_API_URL"):
         return
 
     ingestion_cache_key = (
@@ -232,9 +294,10 @@ def render_api_step_four(
         markdown/video files, preventing accidental sample-content fallback.
     """
     if not fact_base:
-        st.warning(
-            "API mode is active, but no fact base is available. Configure and "
-            "run `FACT_EXTRACTION_API_URL` before generating scripts."
+        st.info(
+            "Step 4 is waiting for Step 2. Once the fact extraction API returns "
+            "a structured fact base for the uploaded document, this section can "
+            "call the script, verification, and video APIs."
         )
         return
 
