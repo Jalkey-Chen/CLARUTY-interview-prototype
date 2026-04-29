@@ -12,6 +12,10 @@ venv/
 env/
 *.log
 
+# Keep local clinical Word notes out of git by default. Even de-identified
+# documents should be intentionally reviewed before sharing.
+data/*.docx
+
 # Keep source-controlled placeholder directories, but avoid committing large generated media by default.
 videos/*.mp4
 videos/*.mov
