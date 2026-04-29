@@ -277,6 +277,78 @@ def select_explanation_mode(version_metadata: dict) -> tuple[str, dict]:
     return selected_key, version_metadata[selected_key]
 
 
+def display_future_personalization_controls() -> dict:
+    """Render placeholder controls for future patient preference selection.
+
+    Args:
+        None.
+
+    Returns:
+        A dictionary mapping stable preference names to boolean selections.
+
+    CLARITY pipeline role:
+        Shows how participants might eventually choose presentation preferences
+        such as simpler language, more technical detail, clearer uncertainty, a
+        more reassuring tone, or Spanish language. In this prototype the
+        controls intentionally do not regenerate content; evaluators should use
+        the five predefined modes until a verified real-time generation pipeline
+        exists.
+    """
+    st.sidebar.header("Future personalization controls")
+    st.sidebar.info(
+        "These controls are placeholders for future real-time generation. In "
+        "this prototype, please use the five predefined modes below."
+    )
+
+    return {
+        "Make it easier to understand": st.sidebar.checkbox(
+            "Make it easier to understand"
+        ),
+        "Include more technical detail": st.sidebar.checkbox(
+            "Include more technical detail"
+        ),
+        "Explain uncertainty more clearly": st.sidebar.checkbox(
+            "Explain uncertainty more clearly"
+        ),
+        "Use a more reassuring tone": st.sidebar.checkbox(
+            "Use a more reassuring tone"
+        ),
+        "Spanish language": st.sidebar.checkbox("Spanish language"),
+    }
+
+
+def display_personalization_summary(preferences: dict) -> None:
+    """Show a non-generative summary of selected future preferences.
+
+    Args:
+        preferences: Dictionary returned by
+        `display_future_personalization_controls`.
+
+    Returns:
+        None. The summary is rendered into the Streamlit page.
+
+    CLARITY pipeline role:
+        Makes placeholder personalization choices visible without changing the
+        current transcript or video. This avoids implying that the prototype is
+        performing live AI generation or clinical verification.
+    """
+    selected_preferences = [
+        label for label, is_selected in preferences.items() if is_selected
+    ]
+
+    st.markdown("**Selected preferences summary**")
+    if selected_preferences:
+        for preference in selected_preferences:
+            st.markdown(f"- {preference}")
+    else:
+        st.write("No future personalization preferences selected.")
+
+    st.caption(
+        "Preference controls are placeholders only; the selected predefined "
+        "mode determines the script and cached video shown in this prototype."
+    )
+
+
 def main() -> None:
     """Render the CLARITY Streamlit application shell.
 
@@ -330,10 +402,12 @@ def main() -> None:
     selected_mode_key, selected_mode_metadata = select_explanation_mode(
         version_metadata
     )
+    personalization_preferences = display_future_personalization_controls()
 
     fact_base = load_json(FACT_BASE_PATH)
     display_case_snapshot(fact_base)
     display_version_metadata(selected_mode_metadata)
+    display_personalization_summary(personalization_preferences)
 
 
 if __name__ == "__main__":

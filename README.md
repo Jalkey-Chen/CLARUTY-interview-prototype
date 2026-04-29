@@ -78,6 +78,7 @@ The prototype is structured to address the interview task requirements:
 - Support a NotebookLM-style explainer workflow using scripts and cached videos.
 - Demonstrate five communication versions.
 - Provide controls for future participant-selected presentation preferences.
+- Show future personalization controls as placeholders without live generation.
 - Clearly document limitations, needed resources, and next steps.
 
 ## Notes
