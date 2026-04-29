@@ -83,6 +83,14 @@ This prototype is intended to demonstrate how CLARITY could:
 5. Notice that the video panel is ready for cached generated videos.
 6. Review pipeline transparency, limitations, and next steps.
 
+## Demo Mode vs API Mode
+
+- Selecting the built-in sample case uses local demo assets: `data/`, `scripts/`, and cached files in `videos/`.
+- Uploading a `.txt`, `.md`, or `.docx` file switches the workflow into API mode.
+- In API mode, Step 1 can call `NOTE_INGESTION_API_URL`, Step 2 calls `FACT_EXTRACTION_API_URL`, Step 4 calls `SCRIPT_GENERATION_API_URL`, optional `VERIFICATION_API_URL`, and `VIDEO_GENERATION_API_URL`.
+- API mode does not silently fall back to the sample fact base, sample scripts, or sample video paths.
+- The current app expects JSON POST endpoints. Common response fields are documented in the code and can be adapted as the backend stabilizes.
+
 ## Placeholders
 
 This repository will intentionally use placeholders for parts of the workflow that should not happen live in the demo:

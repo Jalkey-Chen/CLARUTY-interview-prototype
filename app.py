@@ -3,6 +3,9 @@
 import json
 import os
 import zipfile
+import urllib.error
+import urllib.request
+from hashlib import sha256
 from io import BytesIO
 from html import escape
 from pathlib import Path
@@ -21,6 +24,7 @@ VERSION_METADATA_PATH = DATA_DIR / "version_metadata.json"
 WRITEUP_DIR = APP_ROOT / "writeup"
 LIMITATIONS_PATH = WRITEUP_DIR / "limitations_and_next_steps.md"
 ENV_PATH = APP_ROOT / ".env"
+API_TIMEOUT_SECONDS = 60
 API_ENV_VARS = {
     "OPENAI_API_KEY": "LLM/script generation provider key",
     "NOTE_INGESTION_API_URL": "Future Step 1 secure note ingestion endpoint",
@@ -286,6 +290,330 @@ def display_api_config_status(api_config: dict) -> None:
             status_icon = "OK" if configured else "Missing"
             st.markdown(f"**{variable_name}**: {status_icon} - {status_label}")
             st.caption(description)
+
+
+def get_note_hash(note_text: str) -> str:
+    """Create a stable short hash for a loaded clinical note.
+
+    Args:
+        note_text: Raw imported clinical note text.
+
+    Returns:
+        A short SHA-256 digest that can be used as a session-state cache key.
+
+    CLARITY pipeline role:
+        Lets the API-backed prototype avoid repeating the same extraction or
+        generation calls on every Streamlit rerun for the same uploaded note.
+    """
+    return sha256(note_text.encode("utf-8")).hexdigest()[:16]
+
+
+def post_json_to_api(endpoint_url: str, payload: dict, api_key: str = "") -> dict:
+    """POST JSON to an API endpoint and parse a JSON object response.
+
+    Args:
+        endpoint_url: Fully qualified API endpoint URL.
+        payload: JSON-serializable request body.
+        api_key: Optional bearer token used for future hosted API providers.
+
+    Returns:
+        Parsed JSON object response. Returns an empty dictionary when the
+        request fails, the response is not valid JSON, or the response JSON is
+        not an object.
+
+    CLARITY pipeline role:
+        Provides a small API bridge for uploaded-note mode. The local demo uses
+        cached files, but uploaded cases should move through API-backed Step 2
+        fact extraction, Step 3 script generation/verification, and Step 4 video
+        generation or retrieval.
+    """
+    request_body = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    request = urllib.request.Request(
+        endpoint_url,
+        data=request_body,
+        headers=headers,
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=API_TIMEOUT_SECONDS) as response:
+            response_text = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        error_text = exc.read().decode("utf-8", errors="replace")
+        st.error(f"API request failed with HTTP {exc.code}: {error_text}")
+        return {}
+    except urllib.error.URLError as exc:
+        st.error(f"API request failed: {exc.reason}")
+        return {}
+    except TimeoutError:
+        st.error("API request timed out.")
+        return {}
+
+    try:
+        data = json.loads(response_text)
+    except json.JSONDecodeError as exc:
+        st.error(f"API response was not valid JSON: {exc}")
+        return {}
+
+    if not isinstance(data, dict):
+        st.error("API response must be a JSON object.")
+        return {}
+    return data
+
+
+def extract_response_object(response: dict, keys: list[str]) -> dict:
+    """Extract a nested dictionary from an API response.
+
+    Args:
+        response: Parsed API response object.
+        keys: Candidate keys that may contain the desired nested object.
+
+    Returns:
+        The first nested dictionary found under the candidate keys, or the
+        original response if none of those keys are present.
+
+    CLARITY pipeline role:
+        Makes the prototype tolerant of common API response envelopes such as
+        `{ "fact_base": {...} }` while still accepting direct JSON objects.
+    """
+    for key in keys:
+        value = response.get(key)
+        if isinstance(value, dict):
+            return value
+    return response
+
+
+def extract_response_text(response: dict, keys: list[str]) -> str:
+    """Extract text content from an API response.
+
+    Args:
+        response: Parsed API response object.
+        keys: Candidate string keys, ordered by preference.
+
+    Returns:
+        The first non-empty string found under the candidate keys, or an empty
+        string if the response does not include generated text.
+
+    CLARITY pipeline role:
+        Lets the Step 4 script panel accept several likely API response shapes
+        without forcing the first backend prototype to use one exact field name.
+    """
+    for key in keys:
+        value = response.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def call_fact_extraction_api(note_text: str, api_config: dict) -> dict:
+    """Call the configured fact extraction API for an uploaded case.
+
+    Args:
+        note_text: Raw text extracted from the uploaded clinical note.
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        Structured fact base dictionary returned by the API, or an empty
+        dictionary when the endpoint is missing or the request fails.
+
+    CLARITY pipeline role:
+        Implements API mode for Step 2. Uploaded notes should not reuse the
+        sample fact base; they need a case-specific fact extraction response.
+    """
+    endpoint_url = api_config.get("FACT_EXTRACTION_API_URL", "")
+    if not endpoint_url:
+        st.warning(
+            "API mode is active, but `FACT_EXTRACTION_API_URL` is not configured."
+        )
+        return {}
+
+    response = post_json_to_api(
+        endpoint_url,
+        {"clinical_note": note_text},
+        api_config.get("OPENAI_API_KEY", ""),
+    )
+    return extract_response_object(response, ["fact_base", "data", "result"])
+
+
+def call_note_ingestion_api(note_text: str, api_config: dict) -> dict:
+    """Call the optional note ingestion API for an uploaded case.
+
+    Args:
+        note_text: Raw text extracted from the uploaded clinical note.
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        Ingestion API response dictionary, or an empty dictionary when the
+        endpoint is missing or the request fails.
+
+    CLARITY pipeline role:
+        Represents API mode for Step 1. The prototype can still pass extracted
+        note text directly to downstream APIs, but this hook documents and
+        exercises the intended secure ingestion boundary for uploaded cases.
+    """
+    endpoint_url = api_config.get("NOTE_INGESTION_API_URL", "")
+    if not endpoint_url:
+        st.warning(
+            "API mode is active, but `NOTE_INGESTION_API_URL` is not configured; "
+            "using local uploaded text for downstream API payloads."
+        )
+        return {}
+
+    return post_json_to_api(
+        endpoint_url,
+        {"clinical_note": note_text},
+        api_config.get("OPENAI_API_KEY", ""),
+    )
+
+
+def call_script_generation_api(
+    note_text: str,
+    fact_base: dict,
+    mode_key: str,
+    mode_metadata: dict,
+    preferences: dict,
+    api_config: dict,
+) -> str:
+    """Call the configured script generation API for an uploaded case.
+
+    Args:
+        note_text: Raw imported clinical note text.
+        fact_base: Structured fact base from Step 2.
+        mode_key: Selected explanation mode identifier.
+        mode_metadata: Selected explanation mode metadata.
+        preferences: Placeholder personalization selections from the sidebar.
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        Generated script markdown/text, or an empty string when unavailable.
+
+    CLARITY pipeline role:
+        Implements API mode for the script portion of Step 4. This keeps
+        uploaded cases from showing static demo scripts that belong to the
+        sample case.
+    """
+    endpoint_url = api_config.get("SCRIPT_GENERATION_API_URL", "")
+    if not endpoint_url:
+        st.warning(
+            "API mode is active, but `SCRIPT_GENERATION_API_URL` is not configured."
+        )
+        return ""
+
+    response = post_json_to_api(
+        endpoint_url,
+        {
+            "clinical_note": note_text,
+            "fact_base": fact_base,
+            "mode_key": mode_key,
+            "mode_metadata": mode_metadata,
+            "preferences": preferences,
+        },
+        api_config.get("OPENAI_API_KEY", ""),
+    )
+    return extract_response_text(
+        response,
+        ["script_markdown", "script", "transcript", "content", "text"],
+    )
+
+
+def call_verification_api(
+    note_text: str,
+    fact_base: dict,
+    script_text: str,
+    mode_key: str,
+    api_config: dict,
+) -> dict:
+    """Call the optional verification API for an uploaded-case script.
+
+    Args:
+        note_text: Raw imported clinical note text.
+        fact_base: Structured fact base from Step 2.
+        script_text: Script generated for the selected mode.
+        mode_key: Selected explanation mode identifier.
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        Verification report dictionary, or an empty dictionary when the endpoint
+        is not configured or the request fails.
+
+    CLARITY pipeline role:
+        Supports the intended CLARITY safeguard between script generation and
+        video generation. The current UI displays the returned report but does
+        not block video requests unless future API logic chooses to do so.
+    """
+    endpoint_url = api_config.get("VERIFICATION_API_URL", "")
+    if not endpoint_url:
+        st.warning(
+            "API mode is active, but `VERIFICATION_API_URL` is not configured; "
+            "script verification was skipped."
+        )
+        return {}
+
+    return post_json_to_api(
+        endpoint_url,
+        {
+            "clinical_note": note_text,
+            "fact_base": fact_base,
+            "script": script_text,
+            "mode_key": mode_key,
+        },
+        api_config.get("OPENAI_API_KEY", ""),
+    )
+
+
+def call_video_generation_api(
+    fact_base: dict,
+    script_text: str,
+    mode_key: str,
+    mode_metadata: dict,
+    verification_report: dict,
+    api_config: dict,
+) -> dict:
+    """Call the configured video generation or retrieval API.
+
+    Args:
+        fact_base: Structured fact base from Step 2.
+        script_text: Generated script text for the selected mode.
+        mode_key: Selected explanation mode identifier.
+        mode_metadata: Selected explanation mode metadata.
+        verification_report: Optional verification report from the verification
+        API.
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        Video API response dictionary. Common supported fields include
+        `video_url`, `video_file`, `video_path`, `status`, and `message`.
+
+    CLARITY pipeline role:
+        Implements API mode for the video portion of Step 4. Uploaded cases
+        should request or retrieve video outputs from the configured service
+        instead of showing sample cached videos.
+    """
+    endpoint_url = api_config.get("VIDEO_GENERATION_API_URL", "")
+    if not endpoint_url:
+        st.warning(
+            "API mode is active, but `VIDEO_GENERATION_API_URL` is not configured."
+        )
+        return {}
+
+    return post_json_to_api(
+        endpoint_url,
+        {
+            "fact_base": fact_base,
+            "script": script_text,
+            "mode_key": mode_key,
+            "mode_metadata": mode_metadata,
+            "verification_report": verification_report,
+        },
+        api_config.get("OPENAI_API_KEY", ""),
+    )
 
 
 def render_workflow_strip() -> None:
@@ -602,17 +930,18 @@ def read_uploaded_note(uploaded_file) -> str:
     return ""
 
 
-def handle_case_import(sample_path: Path) -> tuple[str, str]:
+def handle_case_import(sample_path: Path) -> tuple[str, str, str]:
     """Render the clinical note import controls and return the loaded case.
 
     Args:
         sample_path: Path to the built-in sample note used by the demo flow.
 
     Returns:
-        A tuple of `(case_status, note_text)`. `case_status` is one of
-        "No case loaded", "Sample case loaded", or "Uploaded case loaded".
-        `note_text` contains the loaded raw clinical note text, or an empty
-        string when no case is loaded.
+        A tuple of `(case_status, note_text, pipeline_mode)`. `case_status` is
+        one of "No case loaded", "Sample case loaded", or
+        "Uploaded case loaded". `note_text` contains the loaded raw clinical
+        note text, or an empty string when no case is loaded. `pipeline_mode`
+        is "demo", "api", or "none".
 
     CLARITY pipeline role:
         Implements Step 1, where a de-identified clinical note enters the
@@ -646,18 +975,23 @@ def handle_case_import(sample_path: Path) -> tuple[str, str]:
         note_text = read_uploaded_note(uploaded_file)
         if note_text:
             st.success(f"Uploaded case loaded: {uploaded_file.name}")
-            return "Uploaded case loaded", note_text
+            st.info(
+                "Uploaded case loaded in API mode. Steps 2-4 will use "
+                "configured API endpoints instead of local demo assets."
+            )
+            return "Uploaded case loaded", note_text, "api"
         st.warning("Uploaded case could not be loaded.")
-        return "No case loaded", ""
+        return "No case loaded", "", "none"
 
     if use_sample:
         note_text = load_sample_note(sample_path)
         if note_text:
             st.success("Sample case loaded")
-            return "Sample case loaded", note_text
+            st.caption("Sample case uses local demo assets.")
+            return "Sample case loaded", note_text, "demo"
 
     st.info("No case loaded")
-    return "No case loaded", ""
+    return "No case loaded", "", "none"
 
 
 def display_safety_notice() -> None:
@@ -715,11 +1049,13 @@ def display_demo_overview() -> None:
     )
 
 
-def display_case_snapshot(fact_base: dict) -> None:
+def display_case_snapshot(fact_base: dict, pipeline_mode: str) -> None:
     """Render a patient-facing snapshot from the shared structured fact base.
 
     Args:
-        fact_base: Dictionary loaded from `data/extracted_fact_base.json`.
+        fact_base: Dictionary loaded from `data/extracted_fact_base.json` in
+        demo mode, or returned by the fact extraction API in uploaded-case mode.
+        pipeline_mode: "demo", "api", or "none".
 
     Returns:
         None. The snapshot is rendered directly into the Streamlit page.
@@ -735,11 +1071,17 @@ def display_case_snapshot(fact_base: dict) -> None:
         "Review Shared Fact Base",
         "Inspect the clinician-verifiable facts that anchor every explanation version.",
     )
-    st.info(
-        "For this prototype, the structured fact base is loaded from a "
-        "pre-verified JSON file. In a production workflow, this step would be "
-        "generated from the clinical note and reviewed by a clinician."
-    )
+    if pipeline_mode == "api":
+        st.info(
+            "Uploaded case API mode: the structured fact base should come from "
+            "`FACT_EXTRACTION_API_URL`. Local sample facts are not used."
+        )
+    else:
+        st.info(
+            "For this prototype, the structured fact base is loaded from a "
+            "pre-verified JSON file. In a production workflow, this step would "
+            "be generated from the clinical note and reviewed by a clinician."
+        )
 
     if not fact_base:
         st.warning("No structured fact base is available yet.")
@@ -1022,6 +1364,30 @@ def display_script(script_path: Path) -> None:
             )
 
 
+def display_script_text(script_text: str, source_label: str) -> None:
+    """Display API-generated script text in the transcript expander.
+
+    Args:
+        script_text: Generated script markdown or plain text returned by the
+        script generation API.
+        source_label: Short label describing where the script came from.
+
+    Returns:
+        None. The script text or fallback warning is rendered into the page.
+
+    CLARITY pipeline role:
+        Supports uploaded-case API mode for Step 4. It keeps generated scripts
+        separate from local demo markdown files so the dashboard does not show
+        sample-case content for user-uploaded clinical notes.
+    """
+    with st.expander("View transcript / script", expanded=True):
+        st.caption(source_label)
+        if script_text:
+            st.markdown(script_text)
+        else:
+            st.warning("No API-generated script is available yet.")
+
+
 def display_video_or_placeholder(video_path: Path) -> None:
     """Display a cached explainer video or an intentional placeholder panel.
 
@@ -1062,6 +1428,49 @@ def display_video_or_placeholder(video_path: Path) -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def display_api_video_response(video_response: dict) -> None:
+    """Display the result of the video API call for uploaded-case mode.
+
+    Args:
+        video_response: JSON object returned by the configured video generation
+        or retrieval API.
+
+    Returns:
+        None. A playable video, status panel, or API response summary is
+        rendered into the Streamlit page.
+
+    CLARITY pipeline role:
+        Supports Step 4 API mode. Uploaded cases should use API-provided video
+        outputs rather than local sample cached videos.
+    """
+    st.markdown("**API video output**")
+    if not video_response:
+        st.warning("No video API response is available yet.")
+        return
+
+    video_url = extract_response_text(video_response, ["video_url", "url"])
+    if video_url:
+        st.video(video_url)
+        return
+
+    video_file = extract_response_text(video_response, ["video_file", "video_path"])
+    if video_file:
+        candidate_path = Path(video_file)
+        if not candidate_path.is_absolute():
+            candidate_path = APP_ROOT / candidate_path
+        if candidate_path.exists():
+            st.video(str(candidate_path))
+            return
+        st.warning(f"Video API returned a file path that does not exist: {video_file}")
+
+    status = extract_response_text(video_response, ["status", "message"])
+    if status:
+        st.info(status)
+
+    with st.expander("Raw video API response", expanded=False):
+        st.json(video_response)
 
 
 def display_pipeline_transparency() -> None:
@@ -1201,9 +1610,13 @@ def main() -> None:
     display_safety_notice()
 
     st.divider()
-    case_status, note_text = handle_case_import(SAMPLE_NOTE_PATH)
+    case_status, note_text, pipeline_mode = handle_case_import(SAMPLE_NOTE_PATH)
 
     st.markdown(f"**Current case status:** {case_status}")
+    if pipeline_mode == "api":
+        st.markdown("**Pipeline mode:** API mode for uploaded case")
+    elif pipeline_mode == "demo":
+        st.markdown("**Pipeline mode:** Local demo mode")
     if note_text:
         with st.expander("Raw clinical note preview", expanded=False):
             st.text_area(
@@ -1222,8 +1635,38 @@ def main() -> None:
     personalization_preferences = display_future_personalization_controls()
     display_api_config_status(api_config)
 
-    fact_base = load_json(FACT_BASE_PATH)
-    display_case_snapshot(fact_base)
+    note_hash = get_note_hash(note_text) if note_text else ""
+    if pipeline_mode == "api" and note_hash:
+        ingestion_cache_key = (
+            f"api_ingestion:{note_hash}:{api_config.get('NOTE_INGESTION_API_URL', '')}"
+        )
+        if ingestion_cache_key not in st.session_state:
+            with st.spinner("Calling note ingestion API..."):
+                st.session_state[ingestion_cache_key] = call_note_ingestion_api(
+                    note_text,
+                    api_config,
+                )
+        if st.session_state[ingestion_cache_key]:
+            with st.expander("Step 1 API ingestion response", expanded=False):
+                st.json(st.session_state[ingestion_cache_key])
+
+    if pipeline_mode == "demo":
+        fact_base = load_json(FACT_BASE_PATH)
+    elif pipeline_mode == "api" and note_hash:
+        fact_cache_key = (
+            f"api_fact_base:{note_hash}:{api_config.get('FACT_EXTRACTION_API_URL', '')}"
+        )
+        if fact_cache_key not in st.session_state:
+            with st.spinner("Calling fact extraction API..."):
+                st.session_state[fact_cache_key] = call_fact_extraction_api(
+                    note_text,
+                    api_config,
+                )
+        fact_base = st.session_state[fact_cache_key]
+    else:
+        fact_base = {}
+
+    display_case_snapshot(fact_base, pipeline_mode)
     if fact_base:
         takeaway_col, question_col = st.columns(2)
         with takeaway_col:
@@ -1243,15 +1686,84 @@ def main() -> None:
     )
     script_file = selected_mode_metadata.get("script_file") if selected_mode_metadata else ""
     video_file = selected_mode_metadata.get("video_file") if selected_mode_metadata else ""
-    if script_file:
-        display_script(APP_ROOT / script_file)
-    else:
-        st.warning("No script file is configured for the selected mode.")
+    if pipeline_mode == "api":
+        if not fact_base:
+            st.warning(
+                "API mode is active, but no fact base is available. Configure "
+                "and run `FACT_EXTRACTION_API_URL` before generating scripts."
+            )
+        else:
+            preferences_key = json.dumps(
+                personalization_preferences,
+                sort_keys=True,
+            )
+            script_cache_key = (
+                f"api_script:{note_hash}:{selected_mode_key}:"
+                f"{api_config.get('SCRIPT_GENERATION_API_URL', '')}:{preferences_key}"
+            )
+            if script_cache_key not in st.session_state:
+                with st.spinner("Calling script generation API..."):
+                    st.session_state[script_cache_key] = call_script_generation_api(
+                        note_text,
+                        fact_base,
+                        selected_mode_key,
+                        selected_mode_metadata,
+                        personalization_preferences,
+                        api_config,
+                    )
+            script_text = st.session_state[script_cache_key]
+            display_script_text(script_text, "Source: script generation API")
 
-    if video_file:
-        display_video_or_placeholder(APP_ROOT / video_file)
+            verification_report = {}
+            if script_text:
+                script_hash = sha256(script_text.encode("utf-8")).hexdigest()[:16]
+                verification_cache_key = (
+                    f"api_verification:{note_hash}:{selected_mode_key}:"
+                    f"{api_config.get('VERIFICATION_API_URL', '')}:{script_hash}"
+                )
+                if verification_cache_key not in st.session_state:
+                    with st.spinner("Calling verification API..."):
+                        st.session_state[verification_cache_key] = (
+                            call_verification_api(
+                                note_text,
+                                fact_base,
+                                script_text,
+                                selected_mode_key,
+                                api_config,
+                            )
+                        )
+                verification_report = st.session_state[verification_cache_key]
+                if verification_report:
+                    with st.expander("Verification API response", expanded=False):
+                        st.json(verification_report)
+
+                video_cache_key = (
+                    f"api_video:{note_hash}:{selected_mode_key}:"
+                    f"{api_config.get('VIDEO_GENERATION_API_URL', '')}:{script_hash}"
+                )
+                if video_cache_key not in st.session_state:
+                    with st.spinner("Calling video generation API..."):
+                        st.session_state[video_cache_key] = call_video_generation_api(
+                            fact_base,
+                            script_text,
+                            selected_mode_key,
+                            selected_mode_metadata,
+                            verification_report,
+                            api_config,
+                        )
+                display_api_video_response(st.session_state[video_cache_key])
+            else:
+                st.warning("Skipping video API call because no script was generated.")
     else:
-        st.warning("No video file is configured for the selected mode.")
+        if script_file:
+            display_script(APP_ROOT / script_file)
+        else:
+            st.warning("No script file is configured for the selected mode.")
+
+        if video_file:
+            display_video_or_placeholder(APP_ROOT / video_file)
+        else:
+            st.warning("No video file is configured for the selected mode.")
 
     st.divider()
     render_step_header(
