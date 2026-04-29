@@ -38,12 +38,23 @@ streamlit run app.py
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
+├── src/
+│   └── clarity_dashboard/
+│       ├── api.py
+│       ├── config.py
+│       ├── env_config.py
+│       ├── io_utils.py
+│       └── ui.py
 ├── data/
 ├── scripts/
 ├── videos/
 ├── prompts/
 └── writeup/
 ```
+
+`app.py` is intentionally kept as the Streamlit workflow entrypoint. Supporting
+logic is split into `src/clarity_dashboard/` so API calls, document parsing,
+configuration, and UI rendering can evolve independently.
 
 ## Current Prototype Goal
 
