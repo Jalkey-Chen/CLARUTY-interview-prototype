@@ -1,0 +1,37 @@
+{
+  "case_id": "deidentified_thymic_carcinoma_case",
+  "diagnosis": "Metastatic thymic carcinoma",
+  "stage": "Stage IVB",
+  "patient_age": "43",
+  "main_areas_involved": [
+    "anterior mediastinal mass / thymus area",
+    "liver",
+    "lymph nodes",
+    "bones",
+    "small lung nodules",
+    "possible very small brain findings that need follow-up"
+  ],
+  "current_treatment": "Carboplatin and paclitaxel started inpatient",
+  "recommended_next_treatment": "Carboplatin, paclitaxel, and ramucirumab, with repeat imaging after the first two cycles if clinically appropriate",
+  "uncertainty_points": [
+    "Tiny brain MRI findings may represent vascular structures or tiny metastases and need short-term follow-up imaging",
+    "Mildly positive ANA may affect future immunotherapy considerations",
+    "Low reticulocytes may require monitoring for possible early pure red cell aplasia"
+  ],
+  "key_takeaways": [
+    "The diagnosis in the note is metastatic thymic carcinoma.",
+    "The cancer has spread beyond the thymus area, including to the liver and bones.",
+    "Treatment has started, and the note recommends a combination therapy followed by repeat imaging.",
+    "Some findings, including very small brain MRI findings, need follow-up.",
+    "Patients should discuss treatment goals, side effects, and follow-up timing with their care team."
+  ],
+  "questions_for_care_team": [
+    "What is the goal of the recommended treatment?",
+    "What side effects should I watch for?",
+    "When will repeat imaging happen?",
+    "What do the uncertain brain MRI findings mean?",
+    "How might the autoimmune blood test affect treatment options?",
+    "What symptoms should prompt me to contact the care team?"
+  ],
+  "safety_note": "This is a patient education prototype based on a de-identified clinical note. It should be reviewed by clinicians before use."
+}

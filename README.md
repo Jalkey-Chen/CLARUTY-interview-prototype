@@ -47,8 +47,8 @@ The dashboard will be organized as a step-by-step workflow:
 This prototype is intended to demonstrate how CLARITY could:
 
 - Load or upload a de-identified clinical note. Implemented for `.txt` and `.md` files.
-- Load a structured, clinician-verifiable fact base.
-- Show a patient-facing case snapshot.
+- Load a structured, clinician-verifiable fact base. Implemented with `data/extracted_fact_base.json`.
+- Show a patient-facing case snapshot. Implemented from the shared fact base.
 - Switch between five explanation modes:
   - Balanced / Control
   - Spanish
