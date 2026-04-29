@@ -243,13 +243,13 @@ def render_workflow_strip() -> None:
         "Review Script and Cached Video",
         "Transparency and Next Steps",
     ]
-    step_html = "\n".join(
-        f"""
-        <div class="workflow-step">
-            <div class="workflow-step-number">Step {index}</div>
-            <div class="workflow-step-title">{escape(title)}</div>
-        </div>
-        """
+    step_html = "".join(
+        (
+            '<div class="workflow-step">'
+            f'<div class="workflow-step-number">Step {index}</div>'
+            f'<div class="workflow-step-title">{escape(title)}</div>'
+            "</div>"
+        )
         for index, title in enumerate(steps, start=1)
     )
     st.markdown(
@@ -501,7 +501,10 @@ def display_demo_overview() -> None:
             <p class="clarity-hero-text">
                 Import a de-identified note, review the shared fact base, choose
                 one of five communication modes, then inspect the selected script,
-                cached video slot, transparency notes, and limitations.
+                cached video slot, transparency notes, and limitations. The current
+                demo uses local cached assets, but Steps 1-4 are structured so they
+                can later be connected to API-backed extraction, generation,
+                verification, and video services.
             </p>
         </div>
         """,
@@ -889,6 +892,14 @@ def display_pipeline_transparency() -> None:
             "All five versions should come from one shared fact base. This "
             "reduces factual drift when the communication style changes across "
             "language, trust-building, technical detail, and uncertainty framing."
+        )
+        st.markdown(
+            """
+**Future API handoff:** Step 1 can send the imported note to a secure ingestion
+service, Step 2 can call fact extraction plus clinician review tooling, Step 3
+can call style-controlled script generation and verification, and Step 4 can
+retrieve cached verified video outputs after generation is complete.
+"""
         )
 
 
