@@ -52,7 +52,7 @@ The dashboard is organized as a step-by-step workflow:
 
 This prototype is intended to demonstrate how CLARITY could:
 
-- Load or upload a de-identified clinical note. Implemented for `.txt` and `.md` files.
+- Load or upload a de-identified clinical note. Implemented for `.txt`, `.md`, and `.docx` files.
 - Load a structured, clinician-verifiable fact base. Implemented with `data/extracted_fact_base.json`.
 - Show a patient-facing case snapshot. Implemented from the shared fact base.
 - Show key takeaways and suggested questions for the care team from the shared fact base.
@@ -100,4 +100,4 @@ The prototype is structured to address the interview task requirements:
 
 ## Notes
 
-The initial file upload flow will support `.txt` and `.md` files. For `.docx` clinical notes, convert the file to plain text first or add `python-docx` support in a future iteration.
+The initial file upload flow supports `.txt`, `.md`, and `.docx` files. For older `.doc` files, convert the document to `.docx` or plain text before upload.

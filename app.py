@@ -1,10 +1,12 @@
 """Streamlit entrypoint for the CLARITY Patient Explainer Dashboard prototype."""
 
 import json
+from io import BytesIO
 from html import escape
 from pathlib import Path
 
 import streamlit as st
+from docx import Document
 
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -401,6 +403,85 @@ def load_sample_note(path: Path) -> str:
     return ""
 
 
+def extract_docx_text(file_bytes: bytes) -> str:
+    """Extract readable text from an uploaded Word `.docx` document.
+
+    Args:
+        file_bytes: Raw bytes from the uploaded Word document.
+
+    Returns:
+        Plain text extracted from document paragraphs and table cells. Returns
+        an empty string when the document has no readable text.
+
+    CLARITY pipeline role:
+        Extends Step 1 so clinical notes can enter the prototype as Word
+        documents, which is a more realistic format for interview demos and
+        clinical handoffs. The function still converts the upload into plain
+        text before later steps, keeping fact extraction separate from document
+        format parsing.
+    """
+    document = Document(BytesIO(file_bytes))
+    text_blocks: list[str] = []
+
+    for paragraph in document.paragraphs:
+        paragraph_text = paragraph.text.strip()
+        if paragraph_text:
+            text_blocks.append(paragraph_text)
+
+    for table in document.tables:
+        for row in table.rows:
+            cell_text = " | ".join(
+                cell.text.strip() for cell in row.cells if cell.text.strip()
+            )
+            if cell_text:
+                text_blocks.append(cell_text)
+
+    return "\n\n".join(text_blocks)
+
+
+def read_uploaded_note(uploaded_file) -> str:
+    """Convert a supported uploaded note file into plain text.
+
+    Args:
+        uploaded_file: Streamlit uploaded file object for a `.txt`, `.md`, or
+        `.docx` clinical note.
+
+    Returns:
+        Plain text extracted from the uploaded note. Returns an empty string if
+        the file type is unsupported, the document cannot be parsed, or no text
+        can be extracted.
+
+    CLARITY pipeline role:
+        Normalizes multiple note input formats into one raw-text representation
+        for Step 1. This keeps downstream API-ready stages simpler: future fact
+        extraction services can receive note text without needing to know
+        whether the user uploaded text, markdown, or Word.
+    """
+    suffix = Path(uploaded_file.name).suffix.lower()
+    file_bytes = uploaded_file.getvalue()
+
+    if suffix in {".txt", ".md"}:
+        return file_bytes.decode("utf-8", errors="replace")
+
+    if suffix == ".docx":
+        try:
+            note_text = extract_docx_text(file_bytes)
+        except Exception as exc:  # python-docx can raise several parser errors.
+            st.error(f"Unable to parse Word document `{uploaded_file.name}`: {exc}")
+            return ""
+
+        if not note_text:
+            st.warning(
+                f"No readable text was found in Word document `{uploaded_file.name}`."
+            )
+        return note_text
+
+    st.warning(
+        "Unsupported file type. Please upload a `.txt`, `.md`, or `.docx` note."
+    )
+    return ""
+
+
 def handle_case_import(sample_path: Path) -> tuple[str, str]:
     """Render the clinical note import controls and return the loaded case.
 
@@ -415,14 +496,14 @@ def handle_case_import(sample_path: Path) -> tuple[str, str]:
 
     CLARITY pipeline role:
         Implements Step 1, where a de-identified clinical note enters the
-        patient explainer workflow. The current prototype only imports plain
-        text and markdown so the demo stays lightweight; structured fact
-        extraction is handled separately in later steps.
+        patient explainer workflow. The prototype accepts text, markdown, and
+        Word documents, then normalizes them to plain text so structured fact
+        extraction remains a separate API-ready step.
     """
     render_step_header(
         1,
         "Import Clinical Note",
-        "Load a de-identified note from the sample case or from a local text file.",
+        "Load a de-identified note from the sample case or from a local text, markdown, or Word file.",
     )
 
     sample_col, upload_col = st.columns([1, 1], gap="large")
@@ -433,19 +514,21 @@ def handle_case_import(sample_path: Path) -> tuple[str, str]:
 
     with upload_col:
         st.markdown("**Upload local note**")
-        st.caption("Supports `.txt` and `.md` files for this prototype.")
+        st.caption("Supports `.txt`, `.md`, and `.docx` files for this prototype.")
         uploaded_file = st.file_uploader(
             "Upload a de-identified clinical note",
-            type=["txt", "md"],
-            help="Current prototype supports plain text and markdown files.",
+            type=["txt", "md", "docx"],
+            help="Current prototype supports plain text, markdown, and Word documents.",
             label_visibility="collapsed",
         )
 
     if uploaded_file is not None:
-        raw_bytes = uploaded_file.getvalue()
-        note_text = raw_bytes.decode("utf-8", errors="replace")
-        st.success(f"Uploaded case loaded: {uploaded_file.name}")
-        return "Uploaded case loaded", note_text
+        note_text = read_uploaded_note(uploaded_file)
+        if note_text:
+            st.success(f"Uploaded case loaded: {uploaded_file.name}")
+            return "Uploaded case loaded", note_text
+        st.warning("Uploaded case could not be loaded.")
+        return "No case loaded", ""
 
     if use_sample:
         note_text = load_sample_note(sample_path)
