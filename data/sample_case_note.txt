@@ -1,0 +1,20 @@
+De-identified sample clinical note for CLARITY prototype
+
+Patient: 43-year-old adult
+Primary diagnosis in note: metastatic thymic carcinoma
+Stage: IVB
+
+Summary:
+The patient presented with symptoms that led to imaging and biopsy evaluation. Imaging identified an anterior mediastinal mass in the thymus area, with additional findings involving the liver, lymph nodes, bones, small lung nodules, and very small brain MRI findings that need follow-up. Biopsy supported the diagnosis of thymic carcinoma. The note describes metastatic disease because the cancer has spread beyond the thymus area.
+
+Treatment:
+Carboplatin and paclitaxel were started while the patient was inpatient. The note recommends carboplatin, paclitaxel, and ramucirumab, with repeat imaging after the first two cycles if clinically appropriate.
+
+Uncertainty and monitoring points:
+Tiny brain MRI findings may represent vascular structures or tiny metastases and need short-term follow-up imaging. A mildly positive ANA may affect future immunotherapy considerations. Low reticulocytes may require monitoring for possible early pure red cell aplasia.
+
+Patient education focus:
+The patient should discuss treatment goals, side effects, follow-up timing, uncertain brain MRI findings, autoimmune blood test results, and symptoms that should prompt contact with the care team.
+
+Safety note:
+This sample note is de-identified and simplified for a patient education prototype. Final patient-facing content should be reviewed by clinicians before use.
