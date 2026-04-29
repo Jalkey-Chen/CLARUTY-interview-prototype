@@ -10,6 +10,7 @@ APP_ROOT = Path(__file__).resolve().parent
 DATA_DIR = APP_ROOT / "data"
 SAMPLE_NOTE_PATH = DATA_DIR / "sample_case_note.txt"
 FACT_BASE_PATH = DATA_DIR / "extracted_fact_base.json"
+VERSION_METADATA_PATH = DATA_DIR / "version_metadata.json"
 
 
 def load_json(path: Path) -> dict:
@@ -201,6 +202,81 @@ def display_case_snapshot(fact_base: dict) -> None:
         st.markdown(f"- {point}")
 
 
+def display_version_metadata(metadata: dict) -> None:
+    """Render the selected explanation mode metadata.
+
+    Args:
+        metadata: Dictionary describing the currently selected explanation
+        version, including title, language, communication goal, tone, technical
+        detail, and uncertainty detail.
+
+    Returns:
+        None. The version metadata is rendered directly into the Streamlit page.
+
+    CLARITY pipeline role:
+        Implements Step 3 by making the style-control layer visible. The
+        selected mode changes how an explanation is presented, but it should not
+        change the underlying shared clinical facts loaded in Step 2.
+    """
+    st.subheader("Step 3. Choose Explanation Mode")
+
+    if not metadata:
+        st.warning("No explanation mode metadata is available yet.")
+        return
+
+    st.markdown(f"### {metadata.get('title', 'Selected version')}")
+    st.write(metadata.get("communication_goal", "No communication goal provided."))
+
+    language_col, tone_col = st.columns(2)
+    language_col.markdown(f"**Language:** {metadata.get('language', 'Not available')}")
+    tone_col.markdown(f"**Tone:** {metadata.get('tone', 'Not available')}")
+
+    detail_col, uncertainty_col = st.columns(2)
+    detail_col.markdown(
+        f"**Technical detail:** {metadata.get('technical_detail', 'Not available')}"
+    )
+    uncertainty_col.markdown(
+        f"**Uncertainty detail:** {metadata.get('uncertainty_detail', 'Not available')}"
+    )
+
+
+def select_explanation_mode(version_metadata: dict) -> tuple[str, dict]:
+    """Render the sidebar explanation mode selector.
+
+    Args:
+        version_metadata: Dictionary loaded from `data/version_metadata.json`,
+        keyed by stable mode identifiers.
+
+    Returns:
+        A tuple of `(selected_mode_key, selected_mode_metadata)`. If metadata is
+        unavailable, returns an empty key and empty dictionary.
+
+    CLARITY pipeline role:
+        Allows the evaluator to switch between the five predefined presentation
+        styles required by the interview task. This function is intentionally
+        limited to selecting cached/predefined versions; later production work
+        could connect these choices to real-time generation after verification
+        safeguards are in place.
+    """
+    st.sidebar.header("Explanation mode")
+
+    if not version_metadata:
+        st.sidebar.warning("Version metadata is unavailable.")
+        return "", {}
+
+    mode_keys = list(version_metadata.keys())
+    labels = {
+        key: version_metadata[key].get("title", key.replace("_", " ").title())
+        for key in mode_keys
+    }
+    selected_key = st.sidebar.selectbox(
+        "Choose a predefined explanation mode",
+        options=mode_keys,
+        format_func=lambda key: labels[key],
+    )
+    return selected_key, version_metadata[selected_key]
+
+
 def main() -> None:
     """Render the CLARITY Streamlit application shell.
 
@@ -250,8 +326,14 @@ def main() -> None:
                 label_visibility="collapsed",
             )
 
+    version_metadata = load_json(VERSION_METADATA_PATH)
+    selected_mode_key, selected_mode_metadata = select_explanation_mode(
+        version_metadata
+    )
+
     fact_base = load_json(FACT_BASE_PATH)
     display_case_snapshot(fact_base)
+    display_version_metadata(selected_mode_metadata)
 
 
 if __name__ == "__main__":

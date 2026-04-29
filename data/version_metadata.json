@@ -1,0 +1,52 @@
+{
+  "control": {
+    "title": "Balanced / Control",
+    "script_file": "scripts/control.md",
+    "video_file": "videos/control.mp4",
+    "language": "English",
+    "communication_goal": "Provide a clear, balanced explanation of the clinical note for a general patient audience.",
+    "tone": "Neutral, supportive, plain-language",
+    "technical_detail": "Medium",
+    "uncertainty_detail": "Balanced"
+  },
+  "spanish": {
+    "title": "Spanish",
+    "script_file": "scripts/spanish.md",
+    "video_file": "videos/spanish.mp4",
+    "language": "Spanish",
+    "communication_goal": "Provide the same core explanation in patient-friendly Spanish.",
+    "tone": "Neutral, supportive, plain-language",
+    "technical_detail": "Medium",
+    "uncertainty_detail": "Balanced"
+  },
+  "trust_building": {
+    "title": "Trust-building",
+    "script_file": "scripts/trust_building.md",
+    "video_file": "videos/trust_building.mp4",
+    "language": "English",
+    "communication_goal": "Affirm the patient's ability to understand, reflect, and participate in decisions with their care team.",
+    "tone": "Warm, autonomy-supportive, respectful",
+    "technical_detail": "Medium",
+    "uncertainty_detail": "Balanced"
+  },
+  "technical_uncertainty": {
+    "title": "Technical + explicit uncertainty",
+    "script_file": "scripts/technical_uncertainty.md",
+    "video_file": "videos/technical_uncertainty.mp4",
+    "language": "English",
+    "communication_goal": "Preserve more clinical terminology and state uncertainties explicitly.",
+    "tone": "Precise, clinical, transparent",
+    "technical_detail": "High",
+    "uncertainty_detail": "High"
+  },
+  "simple_vague_uncertainty": {
+    "title": "Simpler + broad uncertainty",
+    "script_file": "scripts/simple_vague_uncertainty.md",
+    "video_file": "videos/simple_vague_uncertainty.mp4",
+    "language": "English",
+    "communication_goal": "Use simpler wording, shorter sentences, and a broad sense of what still needs monitoring.",
+    "tone": "Gentle, simple, reassuring",
+    "technical_detail": "Low",
+    "uncertainty_detail": "Low to medium"
+  }
+}
