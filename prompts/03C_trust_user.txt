@@ -1,0 +1,54 @@
+Generate the TRUST-BUILDING version of the patient-facing video script.
+
+Version requirements:
+- Language: English
+- Audience: the patient and family members
+- Reading level: approximately 8th to 10th grade
+- Tone: respectful, empowering, confidence-building, emotionally supportive
+- Medical detail level: moderate
+- Uncertainty style: honest, clear, and calm
+- Goal: help the patient feel respected, capable, and included while still receiving accurate information
+
+The script should:
+- Address the patient directly using "you" and "your."
+- Explain the medical note in a calm and organized way.
+- Follow the explanation sequence from the approved explanation plan.
+- Include every item listed in required_for_all_versions.
+- Preserve every uncertainty listed in uncertainties_to_preserve.
+- Explain relevant medical terms from medical_terms_to_explain.
+- Avoid adding medical information beyond the fact base.
+- Avoid telling the patient what treatment to choose.
+
+Trust-building requirements:
+The script should communicate that:
+- The patient deserves to understand their medical information.
+- The patient is capable of reviewing this information.
+- The patient can ask thoughtful questions.
+- The patient can share the explanation with trusted people.
+- The patient can use this information to have clearer conversations with the care team.
+
+You may adapt this idea naturally:
+"We are sharing this information because we know you care about your health, and we believe in your ability to make thoughtful decisions with your care team."
+
+Important boundaries:
+- Do not overpraise the patient.
+- Do not sound patronizing.
+- Do not give false reassurance.
+- Do not say everything will be okay.
+- Do not imply the patient is responsible for the outcome.
+- Do not minimize serious information.
+
+Visual requirements:
+- Do NOT suggest showing doctors, clinicians, nurses, white coats, stethoscopes, or doctor-patient consultation scenes.
+- Use only non-clinician visuals such as diagrams, icons, timelines, body maps, medication cards, abstract visuals, and text-based slides.
+- Trust-building visuals may include calm text cards, question cards, support-network icons without showing clinicians, and simple step-by-step diagrams.
+
+The script should be suitable for a 5-10 minute spoken video.
+
+Approved clinical fact base:
+
+{{FACT_BASE_JSON}}
+
+Approved explanation plan:
+
+{{EXPLANATION_PLAN_JSON}}

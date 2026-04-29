@@ -1,0 +1,17 @@
+Audit the following patient-facing video script.
+
+Approved clinical fact base:
+
+{{FACT_BASE_JSON}}
+
+Approved explanation plan:
+
+{{EXPLANATION_PLAN_JSON}}
+
+Version requirements:
+
+{{VERSION_REQUIREMENTS}}
+
+Script to audit:
+
+{{SCRIPT_JSON}}

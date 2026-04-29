@@ -1,0 +1,35 @@
+Generate the CONTROL version of the patient-facing video script.
+
+Version requirements:
+- Language: English
+- Audience: the patient and family members
+- Reading level: approximately 8th to 10th grade
+- Tone: calm, clear, respectful, neutral-supportive
+- Medical detail level: moderate
+- Uncertainty style: clear and accurate, but not overly technical
+- Emotional stance: supportive but not overly reassuring
+
+The script should:
+- Address the patient directly using "you" and "your."
+- Explain the medical note in a calm and organized way.
+- Follow the explanation sequence from the approved explanation plan.
+- Include every item listed in required_for_all_versions.
+- Preserve every uncertainty listed in uncertainties_to_preserve.
+- Explain relevant medical terms from medical_terms_to_explain.
+- Avoid adding medical information beyond the fact base.
+- Avoid telling the patient what treatment to choose.
+- Include a gentle statement that this video helps explain the note but does not replace the care team.
+
+Visual requirements:
+- Do NOT suggest showing doctors, clinicians, nurses, white coats, stethoscopes, or doctor-patient consultation scenes.
+- Use only non-clinician visuals such as diagrams, icons, timelines, body maps, medication cards, abstract visuals, and text-based slides.
+
+The script should be suitable for a 5-10 minute spoken video.
+
+Approved clinical fact base:
+
+{{FACT_BASE_JSON}}
+
+Approved explanation plan:
+
+{{EXPLANATION_PLAN_JSON}}

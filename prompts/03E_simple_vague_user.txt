@@ -1,0 +1,59 @@
+Generate the SIMPLE / LOWER-COMPREHENSION WITH VAGUER UNCERTAINTY version of the patient-facing video script.
+
+Version requirements:
+- Language: English
+- Audience: a patient and family members who prefer simpler explanations
+- Reading level: approximately 5th to 6th grade
+- Tone: gentle, clear, reassuring but not falsely optimistic
+- Medical detail level: low to moderate
+- Uncertainty style: general and less technical, but still accurate
+- Goal: make the information understandable without overwhelming the patient
+
+The script should:
+- Address the patient directly using "you" and "your."
+- Use simple words and short sentences.
+- Follow the explanation sequence from the approved explanation plan.
+- Include every item listed in required_for_all_versions, but explain it simply.
+- Preserve every major uncertainty listed in uncertainties_to_preserve, but use general language.
+- Explain relevant medical terms from medical_terms_to_explain in simple language.
+- Avoid adding medical information beyond the fact base.
+- Avoid telling the patient what treatment to choose.
+
+Simplicity requirements:
+Prefer:
+- "Your doctors found..." instead of "The clinical record demonstrates..."
+- "The condition has spread" instead of "metastatic disease burden"
+- "a small tube" instead of "stent," unless stent is explained
+- "medicine used to treat..." instead of complex drug mechanisms
+- "your doctors want to check again" instead of "short-interval follow-up imaging is recommended"
+
+Vague uncertainty requirements:
+Use less technical uncertainty language, such as:
+- "Your doctors are not completely sure yet."
+- "They want to check this again."
+- "This may affect which treatments are safest."
+- "They will keep watching this closely."
+
+But do NOT:
+- remove major uncertainty,
+- turn uncertain findings into confirmed facts,
+- say something is probably harmless unless the fact base says that,
+- give false reassurance,
+- say "you do not need to worry,"
+- say the treatment will definitely work.
+
+Visual requirements:
+- Do NOT suggest showing doctors, clinicians, nurses, white coats, stethoscopes, or doctor-patient consultation scenes.
+- Use only non-clinician visuals such as simple icons, gentle diagrams, step-by-step cards, timelines, and calm text-based slides.
+- Avoid scary, graphic, or overly medical visuals.
+- Avoid complex charts unless they are very simple.
+
+The script should be suitable for a 5-10 minute spoken video.
+
+Approved clinical fact base:
+
+{{FACT_BASE_JSON}}
+
+Approved explanation plan:
+
+{{EXPLANATION_PLAN_JSON}}

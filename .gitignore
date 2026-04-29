@@ -17,3 +17,7 @@ videos/*.mp4
 videos/*.mov
 videos/*.webm
 !videos/.gitkeep
+
+# Experimental notebook outputs can contain generated clinical text and should
+# stay local unless they have been reviewed and intentionally de-identified.
+experiments/**/outputs/

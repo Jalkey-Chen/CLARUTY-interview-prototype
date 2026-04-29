@@ -49,6 +49,9 @@ streamlit run app.py
 ├── scripts/
 ├── videos/
 ├── prompts/
+├── experiments/
+│   └── clarity_api_pipeline/
+│       └── clarity_api_pipeline.ipynb
 └── writeup/
 ```
 
@@ -105,6 +108,23 @@ This prototype is intended to demonstrate how CLARITY could:
 - The current app expects JSON POST endpoints. Common response fields are documented in the code and can be adapted as the backend stabilizes.
 - If you upload a document before configuring backend endpoints, the app will show setup guidance instead of using demo data.
 
+## Experimental API Pipeline Notebook
+
+The generalized prompt pipeline lives in `prompts/` and is exercised by:
+
+```text
+experiments/clarity_api_pipeline/clarity_api_pipeline.ipynb
+```
+
+The notebook reads a de-identified `.docx` clinical note, reuses the app's Word
+text extraction helper, runs Stage 1 fact extraction, Stage 2 explanation
+planning, Stage 3 five-version script generation, and optional Stage 4 visual
+and medical audit. Outputs are written to
+`experiments/clarity_api_pipeline/outputs/`, which is ignored by git.
+
+To run it, configure `.env` with `OPENAI_API_KEY` and `LLM_MODEL`, open the
+notebook in VS Code or Jupyter, set `DOCX_PATH`, then set `RUN_LIVE_API = True`.
+
 ## Placeholders
 
 This repository will intentionally use placeholders for parts of the workflow that should not happen live in the demo:
@@ -113,7 +133,7 @@ This repository will intentionally use placeholders for parts of the workflow th
 - Scripts will initially be draft markdown files.
 - Videos will be read from cached local files if available.
 - Missing videos will show an intentional placeholder panel.
-- Prompt drafts live in `prompts/` for future fact extraction, script generation, verification, and video generation.
+- Prompt drafts live in `prompts/`, including generalized case-agnostic prompts for fact extraction, explanation planning, five script versions, and visual/medical audit.
 - `.env.example` documents future API keys and endpoints; `.env` is ignored by git.
 - No external API calls are made in local demo mode. Uploaded-case API mode can call OpenAI directly when `CLARITY_ENABLE_API_CALLS=true` and `OPENAI_API_KEY` are configured.
 

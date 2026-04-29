@@ -1,0 +1,17 @@
+Using the structured clinical fact base below, create a shared patient-facing explanation plan.
+
+This plan will later be used to generate five video script versions:
+1. Control
+2. Spanish
+3. Trust-building
+4. Technical with full clarity on uncertainty
+5. Simpler / lower-comprehension with vaguer uncertainty language
+
+Do not write the scripts yet.
+Do not generate narration yet.
+Do not add medical information beyond the fact base.
+Return valid JSON only.
+
+Structured clinical fact base:
+
+{{FACT_BASE_JSON}}

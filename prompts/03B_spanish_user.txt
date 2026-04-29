@@ -1,0 +1,44 @@
+Generate the SPANISH version of the patient-facing video script.
+
+Version requirements:
+- Language: Spanish
+- Audience: the patient and family members
+- Use "usted," "su," and "sus" rather than "tú."
+- Reading level: plain, accessible Spanish
+- Tone: calm, respectful, clear, supportive
+- Medical detail level: moderate
+- Uncertainty style: clear and accurate, but not overly technical
+- Translation style: natural Spanish adaptation, not word-for-word English translation
+
+The script should:
+- Address the patient directly using "usted."
+- Explain the medical note in a calm and organized way.
+- Follow the explanation sequence from the approved explanation plan.
+- Include every item listed in required_for_all_versions.
+- Preserve every uncertainty listed in uncertainties_to_preserve.
+- Explain relevant medical terms from medical_terms_to_explain in Spanish.
+- Avoid adding medical information beyond the fact base.
+- Avoid telling the patient what treatment to choose.
+- Include a gentle statement that this video helps explain the note but does not replace the care team.
+
+Translation requirements:
+- Translate meaning, not just words.
+- Use common Spanish medical terms where appropriate.
+- When a technical term is necessary, explain it simply.
+- Keep uncertainty accurate. Do not make uncertain findings sound confirmed.
+- Do not use culturally loaded assumptions about the patient or family.
+
+Visual requirements:
+- Do NOT suggest showing doctors, clinicians, nurses, white coats, stethoscopes, or doctor-patient consultation scenes.
+- Use only non-clinician visuals such as diagrams, icons, timelines, body maps, medication cards, abstract visuals, and text-based slides.
+- Visual suggestions should also be written in Spanish.
+
+The script should be suitable for a 5-10 minute spoken video.
+
+Approved clinical fact base:
+
+{{FACT_BASE_JSON}}
+
+Approved explanation plan:
+
+{{EXPLANATION_PLAN_JSON}}

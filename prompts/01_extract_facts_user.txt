@@ -1,0 +1,13 @@
+Extract a structured clinical fact base from the following clinician-written medical note.
+
+Remember:
+- Use only this note.
+- Preserve uncertainty.
+- Do not write a patient-facing explanation yet.
+- Do not generate a video script yet.
+- Do not add medical information beyond the note.
+- Return valid JSON only.
+
+Clinical note:
+
+{{CLINICAL_NOTE}}

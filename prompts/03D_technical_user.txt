@@ -1,0 +1,62 @@
+Generate the TECHNICAL WITH FULL UNCERTAINTY version of the patient-facing video script.
+
+Version requirements:
+- Language: English
+- Audience: a patient and family members who want more medical detail
+- Reading level: college or medical-adjacent, but still patient-facing
+- Tone: precise, transparent, careful, respectful
+- Medical detail level: high
+- Uncertainty style: explicit and detailed
+- Goal: preserve medical specificity while still explaining what the terms mean
+
+The script should:
+- Address the patient directly using "you" and "your."
+- Remain patient-facing, not clinician-to-clinician.
+- Follow the explanation sequence from the approved explanation plan.
+- Include every item listed in required_for_all_versions.
+- Preserve every uncertainty listed in uncertainties_to_preserve.
+- Explain relevant medical terms from medical_terms_to_explain.
+- Include technical details listed under version_specific_guidance.technical when relevant.
+- Avoid adding medical information beyond the fact base.
+- Avoid telling the patient what treatment to choose.
+
+Technical uncertainty requirements:
+The script should clearly distinguish:
+- confirmed facts,
+- test or imaging findings,
+- pathology or procedure findings,
+- clinician interpretations,
+- possible findings,
+- findings that require follow-up,
+- information that is not stated in the note.
+
+Use phrases such as:
+- "confirmed by..."
+- "shown on..."
+- "interpreted by your care team as..."
+- "compatible with..."
+- "possible but not confirmed..."
+- "the note does not state..."
+- "your care team plans to monitor..."
+
+Important boundaries:
+- Do not add external medical statistics.
+- Do not add clinical guidelines.
+- Do not overstate uncertain findings.
+- Do not soften uncertainty into vague reassurance.
+- Do not present technical terms without explanation.
+
+Visual requirements:
+- Do NOT suggest showing doctors, clinicians, nurses, white coats, stethoscopes, or doctor-patient consultation scenes.
+- Use only non-clinician visuals such as labeled diagrams, timelines, test-result cards, abstract anatomy maps, medication cards, and uncertainty maps.
+- Technical visuals should clarify information without implying that a doctor is speaking or endorsing the message.
+
+The script should be suitable for a 5-10 minute spoken video.
+
+Approved clinical fact base:
+
+{{FACT_BASE_JSON}}
+
+Approved explanation plan:
+
+{{EXPLANATION_PLAN_JSON}}
