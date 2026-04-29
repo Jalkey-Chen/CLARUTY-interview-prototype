@@ -98,6 +98,7 @@ This prototype is intended to demonstrate how CLARITY could:
 
 - Selecting the built-in sample case uses local demo assets: `data/`, `scripts/`, and cached files in `videos/`.
 - Uploading a `.txt`, `.md`, or `.docx` file switches the workflow into API mode.
+- Live API calls remain disabled until `CLARITY_ENABLE_API_CALLS=true` is set in `.env`.
 - In API mode, Step 1 can call `NOTE_INGESTION_API_URL`, Step 2 calls `FACT_EXTRACTION_API_URL`, Step 4 calls `SCRIPT_GENERATION_API_URL`, optional `VERIFICATION_API_URL`, and `VIDEO_GENERATION_API_URL`.
 - API mode does not silently fall back to the sample fact base, sample scripts, or sample video paths.
 - The current app expects JSON POST endpoints. Common response fields are documented in the code and can be adapted as the backend stabilizes.

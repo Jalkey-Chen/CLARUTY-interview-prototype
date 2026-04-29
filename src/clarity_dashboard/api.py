@@ -8,6 +8,45 @@ from hashlib import sha256
 import streamlit as st
 
 from .config import API_TIMEOUT_SECONDS
+from .env_config import api_calls_enabled, endpoint_is_placeholder
+
+
+def endpoint_is_callable(api_config: dict, variable_name: str) -> bool:
+    """Return whether a configured endpoint should be called.
+
+    Args:
+        api_config: Environment-derived API configuration.
+        variable_name: Endpoint variable name to check.
+
+    Returns:
+        True when live API calls are enabled and the endpoint is not a template
+        placeholder.
+
+    CLARITY pipeline role:
+        Allows uploaded cases to enter API mode without causing connection
+        refused errors when users have only copied `.env.example`.
+    """
+    endpoint_url = api_config.get(variable_name, "")
+    if not endpoint_url:
+        st.warning(f"API mode is active, but `{variable_name}` is not configured.")
+        return False
+
+    if not api_calls_enabled(api_config):
+        st.info(
+            "API mode is active, but live API calls are disabled. Set "
+            "`CLARITY_ENABLE_API_CALLS=true` in `.env` after configuring real "
+            "endpoints."
+        )
+        return False
+
+    if endpoint_is_placeholder(endpoint_url):
+        st.info(
+            f"`{variable_name}` is still set to the template localhost endpoint. "
+            "Replace it with a running backend URL before enabling this step."
+        )
+        return False
+
+    return True
 
 
 def get_note_hash(note_text: str) -> str:
@@ -161,12 +200,9 @@ def call_fact_extraction_api(note_text: str, api_config: dict) -> dict:
         Implements API mode for Step 2. Uploaded notes should not reuse the
         sample fact base; they need a case-specific fact extraction response.
     """
-    endpoint_url = api_config.get("FACT_EXTRACTION_API_URL", "")
-    if not endpoint_url:
-        st.warning(
-            "API mode is active, but `FACT_EXTRACTION_API_URL` is not configured."
-        )
+    if not endpoint_is_callable(api_config, "FACT_EXTRACTION_API_URL"):
         return {}
+    endpoint_url = api_config.get("FACT_EXTRACTION_API_URL", "")
 
     response = post_json_to_api(
         endpoint_url,
@@ -194,10 +230,12 @@ def call_note_ingestion_api(note_text: str, api_config: dict) -> dict:
     """
     endpoint_url = api_config.get("NOTE_INGESTION_API_URL", "")
     if not endpoint_url:
-        st.warning(
-            "API mode is active, but `NOTE_INGESTION_API_URL` is not configured; "
-            "using local uploaded text for downstream API payloads."
+        st.info(
+            "`NOTE_INGESTION_API_URL` is not configured; using local uploaded "
+            "text for downstream API payloads."
         )
+        return {}
+    if not endpoint_is_callable(api_config, "NOTE_INGESTION_API_URL"):
         return {}
 
     return post_json_to_api(
@@ -233,12 +271,9 @@ def call_script_generation_api(
         uploaded cases from showing static demo scripts that belong to the
         sample case.
     """
-    endpoint_url = api_config.get("SCRIPT_GENERATION_API_URL", "")
-    if not endpoint_url:
-        st.warning(
-            "API mode is active, but `SCRIPT_GENERATION_API_URL` is not configured."
-        )
+    if not endpoint_is_callable(api_config, "SCRIPT_GENERATION_API_URL"):
         return ""
+    endpoint_url = api_config.get("SCRIPT_GENERATION_API_URL", "")
 
     response = post_json_to_api(
         endpoint_url,
@@ -289,6 +324,8 @@ def call_verification_api(
             "script verification was skipped."
         )
         return {}
+    if not endpoint_is_callable(api_config, "VERIFICATION_API_URL"):
+        return {}
 
     return post_json_to_api(
         endpoint_url,
@@ -330,12 +367,9 @@ def call_video_generation_api(
         should request or retrieve video outputs from the configured service
         instead of showing sample cached videos.
     """
-    endpoint_url = api_config.get("VIDEO_GENERATION_API_URL", "")
-    if not endpoint_url:
-        st.warning(
-            "API mode is active, but `VIDEO_GENERATION_API_URL` is not configured."
-        )
+    if not endpoint_is_callable(api_config, "VIDEO_GENERATION_API_URL"):
         return {}
+    endpoint_url = api_config.get("VIDEO_GENERATION_API_URL", "")
 
     return post_json_to_api(
         endpoint_url,
