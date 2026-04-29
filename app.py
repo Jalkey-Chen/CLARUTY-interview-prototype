@@ -175,6 +175,27 @@ def display_safety_notice() -> None:
     )
 
 
+def display_demo_overview() -> None:
+    """Display a concise overview of the step-by-step demo flow.
+
+    Args:
+        None.
+
+    Returns:
+        None. The overview is rendered directly into the Streamlit page.
+
+    CLARITY pipeline role:
+        Helps evaluators understand the prototype within the first few seconds
+        of the demo. The overview anchors the app as a workflow demonstration
+        rather than a standalone video player or generic dashboard.
+    """
+    st.info(
+        "Demo flow: import a de-identified note, review the shared fact base, "
+        "choose one of five explanation modes, then review the selected script, "
+        "cached video slot, transparency notes, and limitations."
+    )
+
+
 def display_case_snapshot(fact_base: dict) -> None:
     """Render a patient-facing snapshot from the shared structured fact base.
 
@@ -522,6 +543,33 @@ def display_pipeline_transparency() -> None:
         )
 
 
+def display_demo_guide() -> None:
+    """Display a short guide for interview evaluators.
+
+    Args:
+        None.
+
+    Returns:
+        None. The guide is rendered in a Streamlit expander.
+
+    CLARITY pipeline role:
+        Provides a compact walkthrough that an evaluator can follow during a
+        live or recorded demo. It highlights the intended interactions without
+        adding visible instructional clutter to the main patient-facing flow.
+    """
+    with st.expander("Demo Guide for Evaluators", expanded=False):
+        st.markdown(
+            """
+- Load the sample clinical note.
+- Review the shared clinical fact base.
+- Switch between five explanation modes.
+- Open the transcript panel.
+- Notice that the video panel is ready for cached generated videos.
+- Review limitations and next steps.
+"""
+        )
+
+
 def display_limitations(writeup_path: Path) -> None:
     """Display limitations and next steps from a maintained markdown writeup.
 
@@ -583,6 +631,7 @@ def main() -> None:
         "from note import to patient-facing explanation materials."
     )
 
+    display_demo_overview()
     display_safety_notice()
 
     case_status, note_text = handle_case_import(SAMPLE_NOTE_PATH)
@@ -629,6 +678,7 @@ def main() -> None:
         st.warning("No video file is configured for the selected mode.")
 
     st.subheader("Step 5. Review Pipeline Transparency, Limitations, and Next Steps")
+    display_demo_guide()
     display_pipeline_transparency()
     display_limitations(LIMITATIONS_PATH)
 

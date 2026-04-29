@@ -40,7 +40,7 @@ streamlit run app.py
 
 ## Current Prototype Goal
 
-The dashboard will be organized as a step-by-step workflow:
+The dashboard is organized as a step-by-step workflow:
 
 1. Import Clinical Note
 2. Review Shared Fact Base
@@ -66,6 +66,15 @@ This prototype is intended to demonstrate how CLARITY could:
 - Display a corresponding transcript/script. Implemented with draft markdown files in `scripts/`.
 - Display a cached video when available, with an intentional placeholder when no local video file exists.
 - Explain pipeline transparency, limitations, and next steps. Pipeline transparency and limitations are implemented in Step 5.
+
+## Demo Guide
+
+1. Load the sample clinical note.
+2. Review the shared clinical fact base.
+3. Switch between five explanation modes in the sidebar.
+4. Open the transcript panel.
+5. Notice that the video panel is ready for cached generated videos.
+6. Review pipeline transparency, limitations, and next steps.
 
 ## Placeholders
 
