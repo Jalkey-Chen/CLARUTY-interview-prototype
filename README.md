@@ -7,6 +7,12 @@ The prototype is designed for an interview demo. It prioritizes a clear end-to-e
 ## Run Locally
 
 ```bash
+uv run streamlit run app.py
+```
+
+You can also use a standard Python environment:
+
+```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```

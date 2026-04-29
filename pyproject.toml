@@ -1,0 +1,12 @@
+[project]
+name = "clarity-patient-dashboard"
+version = "0.1.0"
+description = "Local Streamlit prototype for the CLARITY Patient Explainer Dashboard interview demo."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit",
+]
+
+[tool.uv]
+package = false
