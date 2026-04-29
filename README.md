@@ -75,6 +75,7 @@ This repository will intentionally use placeholders for parts of the workflow th
 - Scripts will initially be draft markdown files.
 - Videos will be read from cached local files if available.
 - Missing videos will show an intentional placeholder panel.
+- Prompt drafts live in `prompts/` for future fact extraction, script generation, verification, and video generation.
 - No OpenAI, Gemini, ElevenLabs, HeyGen, or other external API calls are used.
 
 ## Interview Task Mapping
