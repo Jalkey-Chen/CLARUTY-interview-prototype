@@ -5,6 +5,7 @@ description = "Local Streamlit prototype for the CLARITY Patient Explainer Dashb
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "openai",
     "python-dotenv",
     "python-docx",
     "streamlit",

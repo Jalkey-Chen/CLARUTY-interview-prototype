@@ -6,9 +6,13 @@ import urllib.request
 from hashlib import sha256
 
 import streamlit as st
+from openai import OpenAI, OpenAIError
 
 from .config import API_TIMEOUT_SECONDS
 from .env_config import api_calls_enabled, endpoint_is_placeholder
+
+
+DEFAULT_LLM_MODEL = "gpt-4.1-mini"
 
 
 def endpoint_is_callable(api_config: dict, variable_name: str) -> bool:
@@ -47,6 +51,319 @@ def endpoint_is_callable(api_config: dict, variable_name: str) -> bool:
         return False
 
     return True
+
+
+def direct_openai_enabled(api_config: dict) -> bool:
+    """Return whether direct OpenAI mode can be used.
+
+    Args:
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        True when live calls are enabled and `OPENAI_API_KEY` is configured.
+
+    CLARITY pipeline role:
+        Lets the prototype run Step 2-4 without a custom FastAPI backend. This
+        is useful for interviews where the available integration is an OpenAI
+        API key rather than deployed CLARITY service endpoints.
+    """
+    return api_calls_enabled(api_config) and bool(api_config.get("OPENAI_API_KEY"))
+
+
+def get_llm_model(api_config: dict) -> str:
+    """Return the configured model for direct OpenAI mode.
+
+    Args:
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        The model name from `LLM_MODEL`, or a conservative default when the
+        value is missing or still set to the template placeholder.
+
+    CLARITY pipeline role:
+        Keeps model selection configurable without hard-coding it throughout
+        fact extraction, script generation, and verification calls.
+    """
+    model = api_config.get("LLM_MODEL", "").strip()
+    if not model or model == "replace-with-selected-model":
+        return DEFAULT_LLM_MODEL
+    return model
+
+
+def extract_output_text(response) -> str:
+    """Extract text from an OpenAI Responses API response.
+
+    Args:
+        response: Response object returned by the OpenAI Python SDK.
+
+    Returns:
+        Best-effort generated text.
+
+    CLARITY pipeline role:
+        Keeps direct OpenAI mode tolerant of small SDK response-shape changes
+        while preserving a simple text interface for downstream parsers.
+    """
+    output_text = getattr(response, "output_text", "")
+    if output_text:
+        return output_text
+
+    chunks: list[str] = []
+    for item in getattr(response, "output", []) or []:
+        for content in getattr(item, "content", []) or []:
+            text = getattr(content, "text", "")
+            if text:
+                chunks.append(text)
+    return "\n".join(chunks).strip()
+
+
+def parse_json_object_from_text(text: str) -> dict:
+    """Parse a JSON object from model output.
+
+    Args:
+        text: Raw model output that should contain a JSON object.
+
+    Returns:
+        Parsed JSON object, or an empty dictionary if parsing fails.
+
+    CLARITY pipeline role:
+        Allows direct OpenAI mode to recover structured fact bases and
+        verification reports from text responses.
+    """
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:].strip()
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        cleaned = cleaned[start : end + 1]
+
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        st.error(f"OpenAI response was not valid JSON: {exc}")
+        return {}
+
+    if not isinstance(parsed, dict):
+        st.error("OpenAI response JSON must be an object.")
+        return {}
+    return parsed
+
+
+def call_openai_text(api_config: dict, developer_prompt: str, user_prompt: str) -> str:
+    """Call OpenAI directly and return generated text.
+
+    Args:
+        api_config: Environment-derived API configuration.
+        developer_prompt: High-priority instructions for the model.
+        user_prompt: Case-specific input prompt.
+
+    Returns:
+        Generated text, or an empty string if the call fails.
+
+    CLARITY pipeline role:
+        Provides the direct OpenAI fallback for uploaded cases when no custom
+        CLARITY backend endpoint is configured.
+    """
+    if not direct_openai_enabled(api_config):
+        st.info(
+            "Direct OpenAI mode is not ready. Set `OPENAI_API_KEY` and "
+            "`CLARITY_ENABLE_API_CALLS=true` in `.env`, or configure a custom "
+            "backend endpoint."
+        )
+        return ""
+
+    client = OpenAI(api_key=api_config.get("OPENAI_API_KEY"))
+    try:
+        response = client.responses.create(
+            model=get_llm_model(api_config),
+            input=[
+                {"role": "developer", "content": developer_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+    except OpenAIError as exc:
+        st.error(f"OpenAI API request failed: {exc}")
+        return ""
+
+    return extract_output_text(response)
+
+
+def call_openai_fact_extraction(note_text: str, api_config: dict) -> dict:
+    """Extract a structured fact base directly with OpenAI.
+
+    Args:
+        note_text: Raw uploaded clinical note text.
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        Structured fact base dictionary, or an empty dictionary when unavailable.
+
+    CLARITY pipeline role:
+        Implements Step 2 without a custom backend when the interview prototype
+        is configured with only an OpenAI API key.
+    """
+    developer_prompt = (
+        "You extract a clinician-reviewable CLARITY fact base from a "
+        "de-identified clinical note. Extract only facts explicitly supported "
+        "by the note. Do not infer prognosis, diagnoses, or treatment beyond "
+        "the note. Separate confirmed facts from uncertainty. Return only JSON."
+    )
+    user_prompt = f"""
+Return a JSON object with exactly these keys:
+case_id, diagnosis, stage, patient_age, main_areas_involved,
+current_treatment, recommended_next_treatment, uncertainty_points,
+key_takeaways, questions_for_care_team, safety_note.
+
+Use arrays for main_areas_involved, uncertainty_points, key_takeaways, and
+questions_for_care_team. If a value is missing, use "Not specified in the note".
+
+Clinical note:
+{note_text}
+"""
+    text = call_openai_text(api_config, developer_prompt, user_prompt)
+    return parse_json_object_from_text(text) if text else {}
+
+
+def call_openai_script_generation(
+    note_text: str,
+    fact_base: dict,
+    mode_key: str,
+    mode_metadata: dict,
+    preferences: dict,
+    api_config: dict,
+) -> str:
+    """Generate a patient explainer script directly with OpenAI.
+
+    Args:
+        note_text: Raw uploaded clinical note text.
+        fact_base: Structured fact base from Step 2.
+        mode_key: Selected explanation mode identifier.
+        mode_metadata: Selected explanation mode metadata.
+        preferences: Sidebar personalization preferences.
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        Markdown script text, or an empty string when unavailable.
+
+    CLARITY pipeline role:
+        Implements Step 4 script generation without a custom backend while
+        preserving the same fact-base-first flow.
+    """
+    developer_prompt = (
+        "You generate CLARITY patient education scripts. Use only the verified "
+        "fact base. Do not add unsupported medical claims or advice. Keep final "
+        "content clinician-reviewable."
+    )
+    user_prompt = f"""
+Generate a NotebookLM-style two-speaker patient explainer script in Markdown.
+
+Selected mode key: {mode_key}
+Mode metadata: {json.dumps(mode_metadata, ensure_ascii=False)}
+Future preferences: {json.dumps(preferences, ensure_ascii=False)}
+
+Use this structure:
+- Title
+- Prototype note
+- Speaker 1 / Speaker 2 dialogue
+- Opening
+- Main diagnosis
+- What the scans and biopsy showed
+- Current and recommended treatment
+- What is still uncertain
+- Questions to discuss with the care team
+- Closing
+
+Shared fact base:
+{json.dumps(fact_base, ensure_ascii=False, indent=2)}
+
+Original clinical note for grounding only:
+{note_text}
+"""
+    return call_openai_text(api_config, developer_prompt, user_prompt)
+
+
+def call_openai_verification(
+    note_text: str,
+    fact_base: dict,
+    script_text: str,
+    mode_key: str,
+    api_config: dict,
+) -> dict:
+    """Verify a generated script directly with OpenAI.
+
+    Args:
+        note_text: Raw uploaded clinical note text.
+        fact_base: Structured fact base from Step 2.
+        script_text: Generated script text.
+        mode_key: Selected explanation mode identifier.
+        api_config: Environment-derived API configuration.
+
+    Returns:
+        Verification report dictionary.
+
+    CLARITY pipeline role:
+        Implements the CLARITY verification checkpoint without a custom backend.
+    """
+    developer_prompt = (
+        "You verify patient education scripts against a clinical note and fact "
+        "base. Return only JSON. Flag unsupported claims, missing critical "
+        "information, overconfident uncertainty language, and direct medical "
+        "advice."
+    )
+    user_prompt = f"""
+Return a JSON object with keys:
+overall_status, unsupported_claims, missing_critical_information,
+uncertainty_language_concerns, medical_advice_concerns,
+translation_or_readability_concerns, recommended_edits.
+
+Mode key: {mode_key}
+
+Clinical note:
+{note_text}
+
+Fact base:
+{json.dumps(fact_base, ensure_ascii=False, indent=2)}
+
+Generated script:
+{script_text}
+"""
+    text = call_openai_text(api_config, developer_prompt, user_prompt)
+    return parse_json_object_from_text(text) if text else {}
+
+
+def build_direct_openai_video_status(
+    script_text: str,
+    verification_report: dict,
+    mode_key: str,
+) -> dict:
+    """Return a video status object for direct OpenAI mode.
+
+    Args:
+        script_text: Generated script text.
+        verification_report: Verification report dictionary.
+        mode_key: Selected explanation mode identifier.
+
+    Returns:
+        Video status dictionary for the UI.
+
+    CLARITY pipeline role:
+        Makes clear that direct OpenAI mode can prepare verified text assets but
+        does not currently generate the final 5-10 minute video file. That video
+        should still be produced and cached after verification.
+    """
+    return {
+        "status": (
+            "Direct OpenAI mode generated the script and verification report. "
+            "Final video generation is not connected in this prototype yet; "
+            "add a cached video file or configure VIDEO_GENERATION_API_URL."
+        ),
+        "mode_key": mode_key,
+        "script_ready": bool(script_text),
+        "verification_status": verification_report.get("overall_status", "not_run"),
+    }
 
 
 def get_note_hash(note_text: str) -> str:

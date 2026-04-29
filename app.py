@@ -5,11 +5,16 @@ import json
 import streamlit as st
 
 from src.clarity_dashboard.api import (
+    build_direct_openai_video_status,
     call_fact_extraction_api,
     call_note_ingestion_api,
+    call_openai_fact_extraction,
+    call_openai_script_generation,
+    call_openai_verification,
     call_script_generation_api,
     call_verification_api,
     call_video_generation_api,
+    direct_openai_enabled,
     get_note_hash,
     get_text_hash,
 )
@@ -76,6 +81,25 @@ def api_endpoint_ready(api_config: dict, endpoint_name: str) -> bool:
     )
 
 
+def api_or_openai_ready(api_config: dict, endpoint_name: str) -> bool:
+    """Return whether a step can run through a backend endpoint or OpenAI.
+
+    Args:
+        api_config: Environment-derived API configuration.
+        endpoint_name: Name of the custom endpoint environment variable.
+
+    Returns:
+        True when a custom endpoint is ready or direct OpenAI mode is ready.
+
+    CLARITY pipeline role:
+        Lets uploaded cases work with only an OpenAI API key while still
+        supporting future custom CLARITY backend endpoints.
+    """
+    return api_endpoint_ready(api_config, endpoint_name) or direct_openai_enabled(
+        api_config
+    )
+
+
 def display_api_setup_needed(step_name: str, endpoint_name: str) -> None:
     """Explain why uploaded-case API mode is waiting for backend setup.
 
@@ -94,10 +118,10 @@ def display_api_setup_needed(step_name: str, endpoint_name: str) -> None:
     st.info(
         f"{step_name} is waiting for a backend API connection. Because you "
         "uploaded your own document, the app will not use the sample demo data. "
-        f"To run this step, set `{endpoint_name}` in `.env`, set "
-        "`CLARITY_ENABLE_API_CALLS=true`, and start the matching backend "
-        "service. To see the static demo immediately, use the built-in sample "
-        "case instead."
+        "To run this step, either configure a custom backend endpoint "
+        f"(`{endpoint_name}`) or set `OPENAI_API_KEY`, set "
+        "`CLARITY_ENABLE_API_CALLS=true`, and choose `LLM_MODEL`. To see the "
+        "static demo immediately, use the built-in sample case instead."
     )
 
 
@@ -129,7 +153,7 @@ def render_fact_base_step(
     if pipeline_mode == "demo":
         fact_base = load_json(FACT_BASE_PATH)
     elif pipeline_mode == "api" and note_hash:
-        if not api_endpoint_ready(api_config, "FACT_EXTRACTION_API_URL"):
+        if not api_or_openai_ready(api_config, "FACT_EXTRACTION_API_URL"):
             display_api_setup_needed(
                 "Step 2 fact extraction",
                 "FACT_EXTRACTION_API_URL",
@@ -138,15 +162,23 @@ def render_fact_base_step(
             display_case_snapshot(fact_base, pipeline_mode)
             return fact_base
 
-        fact_cache_key = (
-            f"api_fact_base:{note_hash}:{api_config.get('FACT_EXTRACTION_API_URL', '')}"
+        provider_key = (
+            api_config.get("FACT_EXTRACTION_API_URL")
+            or f"openai:{api_config.get('LLM_MODEL', '')}"
         )
+        fact_cache_key = f"api_fact_base:{note_hash}:{provider_key}"
         if fact_cache_key not in st.session_state:
             with st.spinner("Calling fact extraction API..."):
-                st.session_state[fact_cache_key] = call_fact_extraction_api(
-                    note_text,
-                    api_config,
-                )
+                if api_endpoint_ready(api_config, "FACT_EXTRACTION_API_URL"):
+                    st.session_state[fact_cache_key] = call_fact_extraction_api(
+                        note_text,
+                        api_config,
+                    )
+                else:
+                    st.session_state[fact_cache_key] = call_openai_fact_extraction(
+                        note_text,
+                        api_config,
+                    )
         fact_base = st.session_state[fact_cache_key]
     else:
         fact_base = {}
@@ -302,20 +334,34 @@ def render_api_step_four(
         return
 
     preferences_key = json.dumps(personalization_preferences, sort_keys=True)
+    script_provider_key = (
+        api_config.get("SCRIPT_GENERATION_API_URL")
+        or f"openai:{api_config.get('LLM_MODEL', '')}"
+    )
     script_cache_key = (
         f"api_script:{note_hash}:{selected_mode_key}:"
-        f"{api_config.get('SCRIPT_GENERATION_API_URL', '')}:{preferences_key}"
+        f"{script_provider_key}:{preferences_key}"
     )
     if script_cache_key not in st.session_state:
         with st.spinner("Calling script generation API..."):
-            st.session_state[script_cache_key] = call_script_generation_api(
-                note_text,
-                fact_base,
-                selected_mode_key,
-                selected_mode_metadata,
-                personalization_preferences,
-                api_config,
-            )
+            if api_endpoint_ready(api_config, "SCRIPT_GENERATION_API_URL"):
+                st.session_state[script_cache_key] = call_script_generation_api(
+                    note_text,
+                    fact_base,
+                    selected_mode_key,
+                    selected_mode_metadata,
+                    personalization_preferences,
+                    api_config,
+                )
+            else:
+                st.session_state[script_cache_key] = call_openai_script_generation(
+                    note_text,
+                    fact_base,
+                    selected_mode_key,
+                    selected_mode_metadata,
+                    personalization_preferences,
+                    api_config,
+                )
     script_text = st.session_state[script_cache_key]
     display_script_text(script_text, "Source: script generation API")
 
@@ -334,19 +380,29 @@ def render_api_step_four(
         api_config,
     )
 
+    video_provider_key = (
+        api_config.get("VIDEO_GENERATION_API_URL")
+        or f"openai_status:{api_config.get('LLM_MODEL', '')}"
+    )
     video_cache_key = (
-        f"api_video:{note_hash}:{selected_mode_key}:"
-        f"{api_config.get('VIDEO_GENERATION_API_URL', '')}:{script_hash}"
+        f"api_video:{note_hash}:{selected_mode_key}:{video_provider_key}:{script_hash}"
     )
     if video_cache_key not in st.session_state:
-        with st.spinner("Calling video generation API..."):
-            st.session_state[video_cache_key] = call_video_generation_api(
-                fact_base,
+        if api_endpoint_ready(api_config, "VIDEO_GENERATION_API_URL"):
+            with st.spinner("Calling video generation API..."):
+                st.session_state[video_cache_key] = call_video_generation_api(
+                    fact_base,
+                    script_text,
+                    selected_mode_key,
+                    selected_mode_metadata,
+                    verification_report,
+                    api_config,
+                )
+        else:
+            st.session_state[video_cache_key] = build_direct_openai_video_status(
                 script_text,
-                selected_mode_key,
-                selected_mode_metadata,
                 verification_report,
-                api_config,
+                selected_mode_key,
             )
     display_api_video_response(st.session_state[video_cache_key])
 
@@ -378,19 +434,32 @@ def render_verification_response(
         Preserves the intended CLARITY verification checkpoint between script
         generation and video generation.
     """
+    verification_provider_key = (
+        api_config.get("VERIFICATION_API_URL")
+        or f"openai:{api_config.get('LLM_MODEL', '')}"
+    )
     verification_cache_key = (
         f"api_verification:{note_hash}:{selected_mode_key}:"
-        f"{api_config.get('VERIFICATION_API_URL', '')}:{script_hash}"
+        f"{verification_provider_key}:{script_hash}"
     )
     if verification_cache_key not in st.session_state:
         with st.spinner("Calling verification API..."):
-            st.session_state[verification_cache_key] = call_verification_api(
-                note_text,
-                fact_base,
-                script_text,
-                selected_mode_key,
-                api_config,
-            )
+            if api_endpoint_ready(api_config, "VERIFICATION_API_URL"):
+                st.session_state[verification_cache_key] = call_verification_api(
+                    note_text,
+                    fact_base,
+                    script_text,
+                    selected_mode_key,
+                    api_config,
+                )
+            else:
+                st.session_state[verification_cache_key] = call_openai_verification(
+                    note_text,
+                    fact_base,
+                    script_text,
+                    selected_mode_key,
+                    api_config,
+                )
     verification_report = st.session_state[verification_cache_key]
     if verification_report:
         with st.expander("Verification API response", expanded=False):

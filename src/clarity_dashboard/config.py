@@ -21,6 +21,7 @@ PLACEHOLDER_API_HOSTS = {
 API_ENV_VARS = {
     API_ENABLE_FLAG: "Set to true to call configured API endpoints",
     "OPENAI_API_KEY": "LLM/script generation provider key",
+    "LLM_MODEL": "OpenAI model used for direct API mode",
     "NOTE_INGESTION_API_URL": "Future Step 1 secure note ingestion endpoint",
     "FACT_EXTRACTION_API_URL": "Future Step 2 fact extraction endpoint",
     "SCRIPT_GENERATION_API_URL": "Future Step 3 script generation endpoint",
