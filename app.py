@@ -486,6 +486,40 @@ def display_video_or_placeholder(video_path: Path) -> None:
     )
 
 
+def display_pipeline_transparency() -> None:
+    """Display the prototype generation workflow and transparency rationale.
+
+    Args:
+        None.
+
+    Returns:
+        None. The pipeline explanation is rendered inside a Streamlit expander.
+
+    CLARITY pipeline role:
+        Implements the transparency portion of Step 5. It helps interview
+        evaluators understand that CLARITY separates note import, fact-base
+        creation, style-controlled script drafting, verification, and video
+        generation instead of treating the final explainer as a black box.
+    """
+    with st.expander("How this prototype was generated", expanded=False):
+        st.markdown(
+            """
+1. Import or select a de-identified clinical note.
+2. Load a structured clinical fact base.
+3. Convert facts into a patient-facing outline.
+4. Generate five style-controlled scripts from the same fact base.
+5. Verify scripts against the source note for unsupported claims or missing critical information.
+6. Convert verified scripts into video explainers.
+7. Present cached videos and transcripts through this dashboard.
+"""
+        )
+        st.info(
+            "All five versions should come from one shared fact base. This "
+            "reduces factual drift when the communication style changes across "
+            "language, trust-building, technical detail, and uncertainty framing."
+        )
+
+
 def main() -> None:
     """Render the CLARITY Streamlit application shell.
 
@@ -564,6 +598,9 @@ def main() -> None:
         display_video_or_placeholder(APP_ROOT / video_file)
     else:
         st.warning("No video file is configured for the selected mode.")
+
+    st.subheader("Step 5. Review Pipeline Transparency, Limitations, and Next Steps")
+    display_pipeline_transparency()
 
 
 if __name__ == "__main__":
