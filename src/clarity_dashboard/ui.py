@@ -847,6 +847,38 @@ def display_api_video_response(video_response: dict) -> None:
         st.json(video_response)
 
 
+def display_api_video_placeholder(reason: str) -> None:
+    """Display an intentional video placeholder for uploaded-case API mode.
+
+    Args:
+        reason: Short explanation of what upstream step is still needed before
+        a generated video can be shown.
+
+    Returns:
+        None. The placeholder panel is rendered into the page.
+
+    CLARITY pipeline role:
+        Keeps Step 4 visually complete even when uploaded-case API mode has not
+        generated a script, verification report, or video response yet. This
+        reinforces that the dashboard is prepared to host generated videos
+        without falling back to sample-case media.
+    """
+    st.markdown("**API video output**")
+    st.markdown(
+        f"""
+        <div class="video-placeholder">
+            <div class="video-placeholder-title">Video not generated yet</div>
+            <p class="video-placeholder-text">
+                {reason} Once the script is verified and video generation is
+                connected, this space will display the selected version's
+                5-10 minute patient explainer video.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def display_pipeline_transparency() -> None:
     """Display the prototype generation workflow and transparency rationale.
 

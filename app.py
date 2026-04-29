@@ -35,6 +35,7 @@ from src.clarity_dashboard.env_config import (
 from src.clarity_dashboard.io_utils import load_json
 from src.clarity_dashboard.ui import (
     display_api_video_response,
+    display_api_video_placeholder,
     display_case_snapshot,
     display_demo_guide,
     display_demo_overview,
@@ -331,6 +332,10 @@ def render_api_step_four(
             "a structured fact base for the uploaded document, this section can "
             "call the script, verification, and video APIs."
         )
+        display_script_text("", "Source: script generation API")
+        display_api_video_placeholder(
+            "The uploaded case does not have a structured fact base yet."
+        )
         return
 
     preferences_key = json.dumps(personalization_preferences, sort_keys=True)
@@ -367,6 +372,9 @@ def render_api_step_four(
 
     if not script_text:
         st.warning("Skipping video API call because no script was generated.")
+        display_api_video_placeholder(
+            "The uploaded case does not have a generated script yet."
+        )
         return
 
     script_hash = get_text_hash(script_text)
