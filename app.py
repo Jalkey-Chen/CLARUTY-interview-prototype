@@ -1,9 +1,11 @@
 """Streamlit entrypoint for the CLARITY Patient Explainer Dashboard prototype."""
 
 import json
+import zipfile
 from io import BytesIO
 from html import escape
 from pathlib import Path
+from xml.etree import ElementTree
 
 import streamlit as st
 from docx import Document
@@ -403,6 +405,51 @@ def load_sample_note(path: Path) -> str:
     return ""
 
 
+def extract_docx_text_from_xml(file_bytes: bytes) -> str:
+    """Extract Word text nodes directly from the `.docx` XML package.
+
+    Args:
+        file_bytes: Raw bytes from the uploaded Word document.
+
+    Returns:
+        Plain text assembled from WordprocessingML text nodes across document
+        body, headers, footers, footnotes, endnotes, and other Word XML parts.
+        Returns an empty string when no text nodes are present.
+
+    CLARITY pipeline role:
+        Provides a fallback parser for Step 1 when clinical note text is stored
+        in Word structures that `python-docx` does not expose through ordinary
+        paragraphs or tables. This keeps the prototype more robust for real
+        interview demo files while still normalizing everything to plain text
+        before API-backed fact extraction.
+    """
+    text_blocks: list[str] = []
+    namespace = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+
+    with zipfile.ZipFile(BytesIO(file_bytes)) as archive:
+        xml_part_names = [
+            name
+            for name in archive.namelist()
+            if name.startswith("word/") and name.endswith(".xml")
+        ]
+
+        for part_name in xml_part_names:
+            try:
+                root = ElementTree.fromstring(archive.read(part_name))
+            except ElementTree.ParseError:
+                continue
+
+            text_values = [
+                node.text
+                for node in root.findall(".//w:t", namespace)
+                if node.text and node.text.strip()
+            ]
+            if text_values:
+                text_blocks.append(" ".join(value.strip() for value in text_values))
+
+    return "\n\n".join(text_blocks)
+
+
 def extract_docx_text(file_bytes: bytes) -> str:
     """Extract readable text from an uploaded Word `.docx` document.
 
@@ -410,8 +457,9 @@ def extract_docx_text(file_bytes: bytes) -> str:
         file_bytes: Raw bytes from the uploaded Word document.
 
     Returns:
-        Plain text extracted from document paragraphs and table cells. Returns
-        an empty string when the document has no readable text.
+        Plain text extracted from document paragraphs, table cells, and a
+        WordprocessingML XML fallback. Returns an empty string when the document
+        has no readable text nodes.
 
     CLARITY pipeline role:
         Extends Step 1 so clinical notes can enter the prototype as Word
@@ -436,7 +484,15 @@ def extract_docx_text(file_bytes: bytes) -> str:
             if cell_text:
                 text_blocks.append(cell_text)
 
-    return "\n\n".join(text_blocks)
+    paragraph_table_text = "\n\n".join(text_blocks)
+    if paragraph_table_text:
+        return paragraph_table_text
+
+    # Some Word files store visible text in shapes, text boxes, headers,
+    # footers, or content structures that are not exposed as normal paragraphs.
+    # Falling back to raw Word XML makes uploads more forgiving before the note
+    # is sent into the later API-ready fact extraction stage.
+    return extract_docx_text_from_xml(file_bytes)
 
 
 def read_uploaded_note(uploaded_file) -> str:
@@ -472,7 +528,9 @@ def read_uploaded_note(uploaded_file) -> str:
 
         if not note_text:
             st.warning(
-                f"No readable text was found in Word document `{uploaded_file.name}`."
+                "No readable text was found in Word document "
+                f"`{uploaded_file.name}`. If this file is a scanned image or "
+                "image-only export, convert it with OCR before uploading."
             )
         return note_text
 
