@@ -10,6 +10,13 @@ The prototype is designed for an interview demo. It prioritizes a clear end-to-e
 uv run streamlit run app.py
 ```
 
+For future API-backed integrations, copy the environment template and fill in
+local values:
+
+```bash
+cp .env.example .env
+```
+
 You can also use a standard Python environment:
 
 ```bash
@@ -85,6 +92,7 @@ This repository will intentionally use placeholders for parts of the workflow th
 - Videos will be read from cached local files if available.
 - Missing videos will show an intentional placeholder panel.
 - Prompt drafts live in `prompts/` for future fact extraction, script generation, verification, and video generation.
+- `.env.example` documents future API keys and endpoints; `.env` is ignored by git.
 - No OpenAI, Gemini, ElevenLabs, HeyGen, or other external API calls are used.
 
 ## Interview Task Mapping

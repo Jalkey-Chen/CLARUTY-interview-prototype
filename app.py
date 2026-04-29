@@ -1,6 +1,7 @@
 """Streamlit entrypoint for the CLARITY Patient Explainer Dashboard prototype."""
 
 import json
+import os
 import zipfile
 from io import BytesIO
 from html import escape
@@ -9,6 +10,7 @@ from xml.etree import ElementTree
 
 import streamlit as st
 from docx import Document
+from dotenv import load_dotenv
 
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -18,6 +20,15 @@ FACT_BASE_PATH = DATA_DIR / "extracted_fact_base.json"
 VERSION_METADATA_PATH = DATA_DIR / "version_metadata.json"
 WRITEUP_DIR = APP_ROOT / "writeup"
 LIMITATIONS_PATH = WRITEUP_DIR / "limitations_and_next_steps.md"
+ENV_PATH = APP_ROOT / ".env"
+API_ENV_VARS = {
+    "OPENAI_API_KEY": "LLM/script generation provider key",
+    "NOTE_INGESTION_API_URL": "Future Step 1 secure note ingestion endpoint",
+    "FACT_EXTRACTION_API_URL": "Future Step 2 fact extraction endpoint",
+    "SCRIPT_GENERATION_API_URL": "Future Step 3 script generation endpoint",
+    "VERIFICATION_API_URL": "Future script verification endpoint",
+    "VIDEO_GENERATION_API_URL": "Future Step 4 video generation endpoint",
+}
 
 
 def inject_custom_css() -> None:
@@ -224,6 +235,57 @@ def inject_custom_css() -> None:
 """,
         unsafe_allow_html=True,
     )
+
+
+def load_environment_config(env_path: Path) -> dict:
+    """Load local environment variables for future API-backed steps.
+
+    Args:
+        env_path: Path to the local `.env` file. The file is intentionally not
+        committed; `.env.example` documents the expected variable names.
+
+    Returns:
+        A dictionary containing configured values for the API-related variables
+        used by future CLARITY integrations. Missing variables are represented
+        as empty strings.
+
+    CLARITY pipeline role:
+        Prepares the prototype for Step 1-4 API integration without calling any
+        external services in the current demo. This gives evaluators and future
+        developers a clear place to configure ingestion, extraction, script
+        generation, verification, and video generation services.
+    """
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+
+    return {name: os.getenv(name, "") for name in API_ENV_VARS}
+
+
+def display_api_config_status(api_config: dict) -> None:
+    """Display non-secret API configuration readiness in the sidebar.
+
+    Args:
+        api_config: Mapping returned by `load_environment_config`.
+
+    Returns:
+        None. The status is rendered into the Streamlit sidebar.
+
+    CLARITY pipeline role:
+        Makes it explicit that the current app is API-ready but still operates
+        with local cached assets. Values are never printed, only whether each
+        expected variable is configured.
+    """
+    with st.sidebar.expander("API configuration", expanded=False):
+        st.caption(
+            "Optional for this prototype. Add values to `.env` using "
+            "`.env.example` as the template when connecting Steps 1-4 to APIs."
+        )
+        for variable_name, description in API_ENV_VARS.items():
+            configured = bool(api_config.get(variable_name))
+            status_label = "Configured" if configured else "Not set"
+            status_icon = "OK" if configured else "Missing"
+            st.markdown(f"**{variable_name}**: {status_icon} - {status_label}")
+            st.caption(description)
 
 
 def render_workflow_strip() -> None:
@@ -1121,6 +1183,7 @@ def main() -> None:
         layout="wide",
     )
     inject_custom_css()
+    api_config = load_environment_config(ENV_PATH)
 
     st.title("CLARITY Patient Explainer Dashboard")
     st.caption(
@@ -1157,6 +1220,7 @@ def main() -> None:
         version_metadata
     )
     personalization_preferences = display_future_personalization_controls()
+    display_api_config_status(api_config)
 
     fact_base = load_json(FACT_BASE_PATH)
     display_case_snapshot(fact_base)
@@ -1179,17 +1243,15 @@ def main() -> None:
     )
     script_file = selected_mode_metadata.get("script_file") if selected_mode_metadata else ""
     video_file = selected_mode_metadata.get("video_file") if selected_mode_metadata else ""
-    script_col, video_col = st.columns([1.05, 0.95], gap="large")
-    with script_col:
-        if script_file:
-            display_script(APP_ROOT / script_file)
-        else:
-            st.warning("No script file is configured for the selected mode.")
-    with video_col:
-        if video_file:
-            display_video_or_placeholder(APP_ROOT / video_file)
-        else:
-            st.warning("No video file is configured for the selected mode.")
+    if script_file:
+        display_script(APP_ROOT / script_file)
+    else:
+        st.warning("No script file is configured for the selected mode.")
+
+    if video_file:
+        display_video_or_placeholder(APP_ROOT / video_file)
+    else:
+        st.warning("No video file is configured for the selected mode.")
 
     st.divider()
     render_step_header(
