@@ -50,6 +50,33 @@ def load_json(path: Path) -> dict:
     return data
 
 
+def load_markdown(path: Path) -> str:
+    """Load a markdown document from disk with graceful error handling.
+
+    Args:
+        path: Path to the markdown file that should be rendered in the app.
+
+    Returns:
+        The markdown text when it can be read, or an empty string when the file
+        is missing or unreadable.
+
+    CLARITY pipeline role:
+        Supports transcript, prompt, and writeup display throughout the
+        prototype. Markdown assets are intentionally stored as editable files so
+        scripts and documentation can be revised without changing the Streamlit
+        application logic.
+    """
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        # Missing files are expected during iteration; the dashboard should
+        # point to the missing asset instead of failing mid-demo.
+        st.warning(f"Markdown file was not found: {path}")
+    except OSError as exc:
+        st.error(f"Unable to read markdown file {path.name}: {exc}")
+    return ""
+
+
 def load_sample_note(path: Path) -> str:
     """Load the built-in de-identified sample clinical note.
 
@@ -349,6 +376,33 @@ def display_personalization_summary(preferences: dict) -> None:
     )
 
 
+def display_script(script_path: Path) -> None:
+    """Display the selected explanation script or a graceful missing-file note.
+
+    Args:
+        script_path: Path to the markdown transcript associated with the
+        selected explanation mode.
+
+    Returns:
+        None. The transcript or fallback warning is rendered into the page.
+
+    CLARITY pipeline role:
+        Implements the transcript half of Step 4. In the prototype, scripts are
+        loaded from cached markdown files rather than generated live. This keeps
+        the interview demo reproducible and reinforces that style-controlled
+        explanation should happen after fact extraction and verification.
+    """
+    with st.expander("View transcript / script", expanded=False):
+        script_text = load_markdown(script_path)
+        if script_text:
+            st.markdown(script_text)
+        else:
+            st.warning(
+                "No transcript is available for this selected version yet. "
+                "Add a markdown file at the path listed in version metadata."
+            )
+
+
 def main() -> None:
     """Render the CLARITY Streamlit application shell.
 
@@ -408,6 +462,13 @@ def main() -> None:
     display_case_snapshot(fact_base)
     display_version_metadata(selected_mode_metadata)
     display_personalization_summary(personalization_preferences)
+
+    st.subheader("Step 4. Review Script and Cached Video")
+    script_file = selected_mode_metadata.get("script_file") if selected_mode_metadata else ""
+    if script_file:
+        display_script(APP_ROOT / script_file)
+    else:
+        st.warning("No script file is configured for the selected mode.")
 
 
 if __name__ == "__main__":

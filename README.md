@@ -56,7 +56,7 @@ This prototype is intended to demonstrate how CLARITY could:
   - Technical + explicit uncertainty
   - Simpler + broad uncertainty
   Metadata is implemented in `data/version_metadata.json`.
-- Display a corresponding transcript/script.
+- Display a corresponding transcript/script. Implemented with draft markdown files in `scripts/`.
 - Display a cached video when available.
 - Explain pipeline transparency, limitations, and next steps.
 
