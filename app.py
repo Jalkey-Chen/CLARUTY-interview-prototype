@@ -403,6 +403,41 @@ def display_script(script_path: Path) -> None:
             )
 
 
+def display_video_or_placeholder(video_path: Path) -> None:
+    """Display a cached explainer video or an intentional placeholder panel.
+
+    Args:
+        video_path: Path to the cached video file for the selected explanation
+        mode.
+
+    Returns:
+        None. The video or placeholder message is rendered into the page.
+
+    CLARITY pipeline role:
+        Implements the video half of Step 4. The prototype intentionally reads
+        cached videos rather than generating videos in real time because video
+        generation is slow, expensive, and should follow script verification.
+        This function makes that design choice visible while keeping the
+        dashboard ready to host generated videos once they are available.
+    """
+    st.markdown("**Cached video explainer**")
+
+    if video_path.exists():
+        st.video(str(video_path))
+        return
+
+    # Missing cached video files are expected at this prototype stage. The
+    # fallback should look deliberate so evaluators understand the dashboard is
+    # prepared for videos, not broken by their absence.
+    st.info(
+        "Video not generated yet.\n\n"
+        "This space will display the 5-10 minute NotebookLM-style explainer "
+        "video for the selected version.\n\n"
+        "For the current prototype, the dashboard is prepared to host the "
+        "generated video once available."
+    )
+
+
 def main() -> None:
     """Render the CLARITY Streamlit application shell.
 
@@ -469,6 +504,12 @@ def main() -> None:
         display_script(APP_ROOT / script_file)
     else:
         st.warning("No script file is configured for the selected mode.")
+
+    video_file = selected_mode_metadata.get("video_file") if selected_mode_metadata else ""
+    if video_file:
+        display_video_or_placeholder(APP_ROOT / video_file)
+    else:
+        st.warning("No video file is configured for the selected mode.")
 
 
 if __name__ == "__main__":

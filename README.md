@@ -57,7 +57,7 @@ This prototype is intended to demonstrate how CLARITY could:
   - Simpler + broad uncertainty
   Metadata is implemented in `data/version_metadata.json`.
 - Display a corresponding transcript/script. Implemented with draft markdown files in `scripts/`.
-- Display a cached video when available.
+- Display a cached video when available, with an intentional placeholder when no local video file exists.
 - Explain pipeline transparency, limitations, and next steps.
 
 ## Placeholders
