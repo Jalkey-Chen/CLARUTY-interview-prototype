@@ -49,6 +49,7 @@ This prototype is intended to demonstrate how CLARITY could:
 - Load or upload a de-identified clinical note. Implemented for `.txt` and `.md` files.
 - Load a structured, clinician-verifiable fact base. Implemented with `data/extracted_fact_base.json`.
 - Show a patient-facing case snapshot. Implemented from the shared fact base.
+- Show key takeaways and suggested questions for the care team from the shared fact base.
 - Switch between five explanation modes:
   - Balanced / Control
   - Spanish

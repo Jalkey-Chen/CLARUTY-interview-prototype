@@ -229,6 +229,54 @@ def display_case_snapshot(fact_base: dict) -> None:
         st.markdown(f"- {point}")
 
 
+def display_key_takeaways(fact_base: dict) -> None:
+    """Display concise patient-facing takeaways from the shared fact base.
+
+    Args:
+        fact_base: Dictionary loaded from `data/extracted_fact_base.json`.
+
+    Returns:
+        None. The takeaways are rendered directly into the Streamlit page.
+
+    CLARITY pipeline role:
+        Provides a short patient-facing summary that is anchored to the same
+        structured facts used by every explanation mode. This gives evaluators
+        a stable reference point before they compare style-controlled scripts.
+    """
+    st.markdown("### Key Takeaways")
+    takeaways = fact_base.get("key_takeaways", [])
+    if not takeaways:
+        st.warning("No key takeaways are available in the shared fact base.")
+        return
+
+    for takeaway in takeaways:
+        st.markdown(f"- {takeaway}")
+
+
+def display_questions_for_care_team(fact_base: dict) -> None:
+    """Display suggested questions for the patient to ask their care team.
+
+    Args:
+        fact_base: Dictionary loaded from `data/extracted_fact_base.json`.
+
+    Returns:
+        None. The questions are rendered directly into the Streamlit page.
+
+    CLARITY pipeline role:
+        Turns the verified fact base into practical discussion prompts. The
+        questions are educational and preparatory, not direct medical advice,
+        which helps keep the prototype aligned with its patient education role.
+    """
+    st.markdown("### Questions for Your Care Team")
+    questions = fact_base.get("questions_for_care_team", [])
+    if not questions:
+        st.warning("No care team questions are available in the shared fact base.")
+        return
+
+    for question in questions:
+        st.markdown(f"- {question}")
+
+
 def display_version_metadata(metadata: dict) -> None:
     """Render the selected explanation mode metadata.
 
@@ -495,6 +543,12 @@ def main() -> None:
 
     fact_base = load_json(FACT_BASE_PATH)
     display_case_snapshot(fact_base)
+    if fact_base:
+        takeaway_col, question_col = st.columns(2)
+        with takeaway_col:
+            display_key_takeaways(fact_base)
+        with question_col:
+            display_questions_for_care_team(fact_base)
     display_version_metadata(selected_mode_metadata)
     display_personalization_summary(personalization_preferences)
 
