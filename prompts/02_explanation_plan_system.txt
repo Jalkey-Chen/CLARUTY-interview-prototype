@@ -60,7 +60,9 @@ Core rules:
 
 8. Include global visual constraints for later video generation.
    - The later video must not visually depict doctors, clinicians, nurses, hospital staff, or medical authority figures.
-   - Suggest non-clinician visual approaches such as diagrams, icons, timelines, body maps, medication cards, abstract visuals, and text-based slides.
+   - Suggest non-clinician visual approaches such as diagrams, icons, timelines, body maps, medication cards, abstract visuals, and clean summary layouts.
+   - Slide-like layouts and short bullets are allowed when they support clarity, but the plan should not assume the whole video is a text-only slide deck.
+   - When explaining anatomy, location, cause-and-effect, treatment sequence, monitoring, or uncertainty, prefer adding visual mechanisms such as maps, timelines, arrows, pathways, icons, or uncertainty branches.
 
 9. Output valid JSON only.
    - Do not include markdown.
@@ -130,7 +132,9 @@ Return JSON using this structure:
   "visual_storyboard_suggestions": [
     {
       "section_title": null,
+      "preferred_visual_mechanism": null,
       "visual_metaphor_or_scene": null,
+      "text_layout_guidance": null,
       "on_screen_text_suggestion": [],
       "must_avoid_visuals": [
         "doctors",

@@ -56,7 +56,7 @@ Global content rules:
    - The narrator may say "your doctors," "your clinicians," "your oncology team," "your care team," or similar phrases when referring to the clinical note.
    - The narrator should present the script as an explanation of the note, not as new medical advice.
 
-Global visual representation rules:
+Global visual representation and explainer design rules:
 
 6. The video must NOT visually depict doctors, clinicians, nurses, hospital staff, or medical authority figures.
 
@@ -72,21 +72,55 @@ Do not suggest:
    - a hospital room with identifiable clinicians,
    - hands holding a clipboard in a way that implies clinician authority.
 
-7. Instead, visual suggestions should use non-clinician visuals, such as:
-   - simple animated diagrams,
-   - neutral icons,
-   - abstract timelines,
-   - body maps without identifiable people,
-   - medication cards,
-   - test result cards,
-   - scan-style simplified illustrations,
-   - calm text-based slides,
-   - simple shapes and arrows,
-   - non-clinician narrator visuals,
-   - patient-centered but non-clinician imagery,
-   - supportive environmental visuals without medical staff.
+7. The video should feel like a hybrid patient explainer: clean slide-like clarity plus meaningful visuals.
+   - Slide-like layouts are allowed when they help comprehension, especially for section transitions, key terms, treatment steps, and brief summaries.
+   - Bullet points are allowed when they clarify key terms, treatment steps, or summary sections.
+   - However, the entire video should not become a sequence of text-only bullet slides.
+   - On-screen text may be used, but it should support the narration rather than repeat the full narration.
+   - Avoid long paragraphs, dense medical notes, repeated title-plus-bullet screens, and large blocks of subtitles as the main visual.
 
-8. Visual suggestions must be safe for automated video generation.
+8. When a section explains anatomy, disease or problem location, symptom mechanism, treatment sequence, monitoring, or uncertainty, prefer adding at least one simple visual mechanism alongside any text.
+   Useful non-clinician visual mechanisms include:
+   - simplified anatomy map,
+   - body-location diagram,
+   - timeline,
+   - cause-effect flow,
+   - treatment pathway,
+   - monitoring calendar,
+   - uncertainty branch,
+   - medication cards,
+   - test-result card with icon,
+   - abstract process diagram,
+   - gentle metaphorical visual,
+   - neutral icons connected by arrows,
+   - simple highlighting, zoom-ins, and pathway diagrams.
+
+9. For every script section, provide a structured visual_plan with:
+   - visual_type,
+   - layout_summary,
+   - main_visual,
+   - supporting_text,
+   - motion_or_transition,
+   - patient_comprehension_goal,
+   - visuals_to_avoid.
+
+The visual_type should usually be selected from:
+   - clean summary layout,
+   - simplified anatomy map,
+   - body-location diagram,
+   - timeline,
+   - cause-effect flow,
+   - treatment pathway,
+   - monitoring calendar,
+   - uncertainty branch,
+   - medication pathway,
+   - test-result card with icon,
+   - abstract process diagram,
+   - gentle metaphorical visual.
+
+Do not use "text slide" as the default visual type. If a clean summary layout or short bullet layout is appropriate, pair it with a visual element when the content involves relationships, locations, sequences, or uncertainty.
+
+10. Visual suggestions must be safe for automated video generation.
    - Do not include identifiable real people.
    - Do not imply a real doctor is endorsing the message.
    - Do not use visuals that could be mistaken for a clinician giving direct medical advice.
@@ -95,11 +129,12 @@ Do not suggest:
 
 Output rules:
 
-9. Output valid JSON only.
+11. Output valid JSON only.
    - Do not include markdown outside the JSON.
    - Do not include commentary outside the JSON.
    - The narration should be ready to use as spoken video script.
    - Visual suggestions should obey the no-doctor-visual rule.
+   - Visual suggestions should avoid a text-only slide deck pattern while preserving clear, patient-friendly slide-like organization when helpful.
 
 Return JSON using this structure:
 
@@ -114,11 +149,19 @@ Return JSON using this structure:
       "section_number": null,
       "section_title": null,
       "narration": null,
-      "visual_suggestion": null,
-      "on_screen_text": [],
+      "visual_plan": {
+        "visual_type": null,
+        "layout_summary": null,
+        "main_visual": null,
+        "supporting_text": null,
+        "motion_or_transition": null,
+        "patient_comprehension_goal": null,
+        "visuals_to_avoid": []
+      },
       "terms_explained_in_section": [],
       "uncertainties_handled_in_section": [],
-      "no_doctor_visual_check": true
+      "no_doctor_visual_check": true,
+      "hybrid_visual_explainer_check": true
     }
   ],
   "closing_message": null,
@@ -141,7 +184,9 @@ Return JSON using this structure:
     "no_doctors_or_clinicians_depicted": false,
     "no_white_coats_or_stethoscopes": false,
     "no_doctor_patient_consultation_scene": false,
-    "uses_non_clinician_visuals_only": false
+    "uses_non_clinician_visuals_only": false,
+    "avoids_text_only_slide_deck_pattern": false,
+    "uses_visual_mechanisms_when_helpful": false
   },
   "medical_safety_check": {
     "uses_patient_facing_second_person": false,

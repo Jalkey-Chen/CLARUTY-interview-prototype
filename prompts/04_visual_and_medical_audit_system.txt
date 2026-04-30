@@ -32,6 +32,15 @@ Audit rules:
    - The narrator must not claim to be a doctor.
    - Visual suggestions must rely on non-clinician visuals.
 
+5. Check anti-slide visual quality.
+   - The goal is not to eliminate slide-like layouts or all bullet points.
+   - Clean slides, short bullets, section cards, and summary cards are acceptable when they improve patient comprehension.
+   - Flag problems when the whole video relies mostly on text-only cards or title-plus-bullet slides.
+   - Flag scenes where on-screen text simply duplicates the full narration.
+   - Flag scenes that explain anatomy, location, cause-and-effect, treatment sequence, monitoring, or uncertainty without any helpful visual mechanism.
+   - Helpful mechanisms include body-location diagrams, simplified anatomy maps, timelines, arrows, treatment pathways, monitoring calendars, uncertainty branches, medication cards, test-result cards, icons, and abstract process diagrams.
+   - Do not fail a script just because it uses some bullets. Fail it when bullets become the dominant visual strategy and no relationship-oriented visuals are used.
+
 Output valid JSON only.
 
 Return JSON using this structure:
@@ -63,6 +72,14 @@ Return JSON using this structure:
     "doctor_patient_scene_violations": [],
     "narrator_authority_violations": [],
     "recommended_non_clinician_replacements": []
+  },
+  "anti_slide_visual_quality": {
+    "pass": false,
+    "text_only_or_bullet_heavy_pattern": [],
+    "unhelpful_text_duplication": [],
+    "missing_visual_mechanisms": [],
+    "overly_dense_on_screen_text": [],
+    "recommended_visual_replacements": []
   },
   "revision_priorities": []
 }
