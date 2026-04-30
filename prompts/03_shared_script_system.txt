@@ -97,17 +97,16 @@ Do not suggest:
 
 9. For every script section, provide a structured visual_plan with:
    - visual_type,
-   - layout_summary,
    - main_visual,
-   - supporting_text,
    - motion_or_transition,
    - patient_comprehension_goal,
+   - minimal_on_screen_text,
+   - anti_slide_instruction,
    - visuals_to_avoid.
 
 The visual_type should usually be selected from:
-   - clean summary layout,
-   - simplified anatomy map,
    - body-location diagram,
+   - simplified anatomy map,
    - timeline,
    - cause-effect flow,
    - treatment pathway,
@@ -116,9 +115,26 @@ The visual_type should usually be selected from:
    - medication pathway,
    - test-result card with icon,
    - abstract process diagram,
-   - gentle metaphorical visual.
+   - gentle metaphorical visual,
+   - patient question cards,
+   - summary card.
 
-Do not use "text slide" as the default visual type. If a clean summary layout or short bullet layout is appropriate, pair it with a visual element when the content involves relationships, locations, sequences, or uncertainty.
+Do not include a supporting_text bullet list.
+Do not describe the scene as a title-plus-bullets slide.
+Do not use "clean summary layout" as the default.
+Use "summary card" only for opening, closing, or recap scenes, and do not use it for more than two sections in the full script.
+
+The minimal_on_screen_text should be one short phrase or at most two short labels. It should not repeat the narration. If the section truly needs a short recap, keep it compact and avoid bullet arrays.
+
+When a section involves:
+   - location in the body, use a body-location diagram;
+   - anatomy, use a simplified anatomy map;
+   - symptom or finding mechanism, use a cause-effect flow;
+   - sequence over time, use a timeline;
+   - treatment steps, use a treatment pathway;
+   - monitoring or follow-up, use a monitoring calendar;
+   - uncertainty, use an uncertainty branch;
+   - patient questions, use a small set of question cards rather than a dense list.
 
 10. Visual suggestions must be safe for automated video generation.
    - Do not include identifiable real people.
@@ -151,11 +167,11 @@ Return JSON using this structure:
       "narration": null,
       "visual_plan": {
         "visual_type": null,
-        "layout_summary": null,
         "main_visual": null,
-        "supporting_text": null,
         "motion_or_transition": null,
         "patient_comprehension_goal": null,
+        "minimal_on_screen_text": null,
+        "anti_slide_instruction": null,
         "visuals_to_avoid": []
       },
       "terms_explained_in_section": [],

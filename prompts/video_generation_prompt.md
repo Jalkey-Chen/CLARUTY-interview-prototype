@@ -6,6 +6,12 @@ You are supporting the CLARITY workflow: Clinician-Led AI Resources Individualiz
 
 Convert a verified script into a 5-10 minute explainer video plan.
 
+If this plan will be used with NotebookLM, do not upload the raw structured
+JSON script directly. First convert the script into a NotebookLM-ready source
+document that contains the style brief, voiceover, scene directions, and minimal
+on-screen text. NotebookLM may treat JSON keys, checklists, and bullet arrays as
+source content instead of strict directing instructions.
+
 ## Requirements
 
 - Use only the verified script.
@@ -66,11 +72,11 @@ Return a video production plan with:
 - Suggested visual style
 - Structured visual plan for each scene:
   - visual_type
-  - layout_summary
   - main_visual
-  - supporting_text
   - motion_or_transition
   - patient_comprehension_goal
+  - minimal_on_screen_text
+  - anti_slide_instruction
   - visuals_to_avoid
 - Caption notes
 - Accessibility notes

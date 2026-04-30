@@ -118,9 +118,14 @@ experiments/clarity_api_pipeline/clarity_api_pipeline.ipynb
 
 The notebook reads a de-identified `.docx` clinical note, reuses the app's Word
 text extraction helper, runs Stage 1 fact extraction, Stage 2 explanation
-planning, Stage 3 five-version script generation, and optional Stage 4 visual
-and medical audit. Outputs are written to
+planning, Stage 3 five-version script generation, Stage 3.5 NotebookLM source
+packaging, and optional Stage 4 visual and medical audit. Outputs are written to
 `experiments/clarity_api_pipeline/outputs/`, which is ignored by git.
+
+When generating NotebookLM videos, use the `03F_*_notebooklm_source.txt` files
+instead of uploading the raw `03_*_script.json` files. The packaged source files
+remove JSON keys, checklists, and long supporting text arrays so NotebookLM sees
+a video brief, voiceover, and scene-by-scene visual direction.
 
 To run it, configure `.env` with `OPENAI_API_KEY` and `LLM_MODEL`, open the
 notebook in VS Code or Jupyter, set `DOCX_PATH`, then set `RUN_LIVE_API = True`.

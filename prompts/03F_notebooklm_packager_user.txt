@@ -1,0 +1,16 @@
+Convert the following structured script JSON into a NotebookLM-ready video source document.
+
+The goal is to make NotebookLM generate a patient-facing video that is more visual and less like a text-only slide deck.
+
+Important:
+- Do not output JSON.
+- Do not include checklists.
+- Do not include audit fields.
+- Do not include long supporting_text bullet lists.
+- Keep the narration faithful.
+- Make the visual directions concrete and diagram-oriented.
+- Preserve the no-doctor visual rule.
+
+Structured script JSON:
+
+{{SCRIPT_JSON}}

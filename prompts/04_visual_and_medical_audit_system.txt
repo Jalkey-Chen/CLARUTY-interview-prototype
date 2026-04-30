@@ -36,6 +36,7 @@ Audit rules:
    - The goal is not to eliminate slide-like layouts or all bullet points.
    - Clean slides, short bullets, section cards, and summary cards are acceptable when they improve patient comprehension.
    - Flag problems when the whole video relies mostly on text-only cards or title-plus-bullet slides.
+   - Flag structured script sections that include long supporting_text arrays or visual directions that are likely to become bullet slides.
    - Flag scenes where on-screen text simply duplicates the full narration.
    - Flag scenes that explain anatomy, location, cause-and-effect, treatment sequence, monitoring, or uncertainty without any helpful visual mechanism.
    - Helpful mechanisms include body-location diagrams, simplified anatomy maps, timelines, arrows, treatment pathways, monitoring calendars, uncertainty branches, medication cards, test-result cards, icons, and abstract process diagrams.
@@ -76,6 +77,7 @@ Return JSON using this structure:
   "anti_slide_visual_quality": {
     "pass": false,
     "text_only_or_bullet_heavy_pattern": [],
+    "supporting_text_array_risk": [],
     "unhelpful_text_duplication": [],
     "missing_visual_mechanisms": [],
     "overly_dense_on_screen_text": [],
