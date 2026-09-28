@@ -127,8 +127,10 @@ instead of uploading the raw `03_*_script.json` files. The packaged source files
 remove JSON keys, checklists, and long supporting text arrays so NotebookLM sees
 a video brief, voiceover, and scene-by-scene visual direction.
 
-To run it, configure `.env` with `OPENAI_API_KEY` and `LLM_MODEL`, open the
-notebook in VS Code or Jupyter, set `DOCX_PATH`, then set `RUN_LIVE_API = True`.
+Stages 1-4 run on Claude (`CLAUDE_MODEL`, default `claude-opus-5-5`, with
+`CLAUDE_EFFORT=high`). To run them, configure `.env` with `ANTHROPIC_API_KEY`,
+open the notebook in VS Code or Jupyter, set `DOCX_PATH`, then set
+`RUN_LIVE_API = True`. The Streamlit app's direct API mode still uses OpenAI.
 
 Stage 5 renders voice-over-only explainer videos with the HeyGen Video Agent
 API (`src/clarity_dashboard/heygen.py`, prompt template
