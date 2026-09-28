@@ -1,0 +1,27 @@
+Create a {{TARGET_DURATION}} patient education explainer video in {{LANGUAGE}}, in landscape orientation.
+
+No avatar. Voice-over narration only. Do not show any on-screen presenter, host, spokesperson, or human speaker.
+
+Narration rules:
+The script below has already been reviewed for medical accuracy. It is a verbatim script, not a concept or theme to reinterpret.
+Read the Voiceover text of every scene exactly as written, in the order given.
+Do not add, remove, reword, summarize, merge, or reorder narration sentences.
+Do not add an extra introduction, outro, call to action, statistics, or facts.
+Keep every uncertainty word exactly as written, such as "may", "possible", "not yet known", and "needs follow-up".
+The narrator speaks to the viewer as "you" and must never claim to be a doctor or to speak for the care team.
+The Visual direction and Minimal on-screen text lines, if present, are directions for you. Never read them aloud.
+
+Visual rules:
+Never show doctors, nurses, clinicians, hospital staff, white coats, scrubs, stethoscopes, or doctor-patient consultation scenes.
+Build each scene around one clear visual idea that helps a patient understand the narration: a simple body-location diagram, a timeline, a treatment pathway with arrows, a monitoring calendar, a medication card, an uncertainty branch, or connected icons.
+Keep anatomy simple and schematic. Do not show realistic medical imaging, surgery, blood, needles, or graphic imagery.
+Do not show uncertain or possible findings as if they were confirmed.
+Clean title cards and short summary cards are welcome for transitions, but most scenes should be diagrams, not bullet slides.
+Keep on-screen text to a short phrase per scene. Do not put the full narration on screen.
+Include captions.
+
+Style: Calm Clarity, patient education. Soft white #F7FBFB backgrounds, deep teal #12343B for headings and diagram lines, teal #2B7A78 for highlights and arrows, muted slate #526B73 for secondary text, and a gentle amber #E9C46A only to mark items that still need follow-up. Rounded, friendly sans-serif type. Flat, uncluttered vector diagrams with generous white space. Elements draw on or fade in as the narration mentions them, and arrows and highlights guide attention to one thing at a time. Transitions are soft crossfades. Pacing is unhurried, with a brief pause between scenes. Soft, low-volume ambient music under the narration. The overall feeling is calm, respectful, and clear.
+
+Script:
+
+{{VIDEO_SOURCE}}

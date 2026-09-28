@@ -130,6 +130,16 @@ a video brief, voiceover, and scene-by-scene visual direction.
 To run it, configure `.env` with `OPENAI_API_KEY` and `LLM_MODEL`, open the
 notebook in VS Code or Jupyter, set `DOCX_PATH`, then set `RUN_LIVE_API = True`.
 
+Stage 5 renders voice-over-only explainer videos with the HeyGen Video Agent
+API (`src/clarity_dashboard/heygen.py`, prompt template
+`prompts/05_heygen_video_agent_prompt.txt`). It never sends an `avatar_id`,
+renders pipeline scripts only after a passing Stage 4 audit, and compares the
+rendered subtitles with the approved narration in `06_*_narration_check.json`.
+With `RUN_HEYGEN_VIDEO = False`, it only saves the HeyGen prompts and request
+bodies for review. `HEYGEN_SOURCE_OVERRIDES` defaults to `scripts/control.md`
+so the control version can be tested before the full pipeline has run. To
+render, set `HEYGEN_API_KEY` in `.env` and `RUN_HEYGEN_VIDEO = True`.
+
 ## Placeholders
 
 This repository will intentionally use placeholders for parts of the workflow that should not happen live in the demo:
