@@ -1,8 +1,9 @@
 """HeyGen Video Agent helpers for the CLARITY Stage 5 video pipeline.
 
-This module intentionally uses only the Python standard library and does not
-import Streamlit, so the experiment notebook can use it directly and the
-source-text helpers can be tested without network access or API keys.
+This module uses the Python standard library (plus `fpdf2`, imported only when
+a visual-directions PDF is built) and does not import Streamlit, so the
+experiment notebook can use it directly and the source-text helpers can be
+tested without network access or API keys.
 """
 
 from __future__ import annotations
@@ -134,6 +135,7 @@ def build_video_agent_payload(
     incognito_mode: bool = True,
     visibility: str = "private",
     callback_id: str | None = None,
+    files: list[dict] | None = None,
 ) -> dict:
     """Build a Video Agent request body for a voice-over-only CLARITY video.
 
@@ -145,6 +147,7 @@ def build_video_agent_payload(
         incognito_mode: Disables HeyGen memory injection and extraction.
         visibility: Session visibility; "private" keeps it owner-only.
         callback_id: Optional caller-defined ID, useful for tracing versions.
+        files: Optional attachments, such as a base64 visual-directions PDF.
 
     Returns:
         JSON-serializable request body for `POST /v3/video-agents`.
@@ -174,6 +177,8 @@ def build_video_agent_payload(
         payload["style_id"] = style_id
     if callback_id:
         payload["callback_id"] = callback_id
+    if files:
+        payload["files"] = files
     return payload
 
 
@@ -193,6 +198,64 @@ def create_video_agent_session(api_key: str, payload: dict) -> dict:
     return heygen_request(api_key, "POST", "/v3/video-agents", payload=payload)["data"]
 
 
+def send_video_agent_message(
+    api_key: str,
+    session_id: str,
+    message: str | None = None,
+    voice_id: str | None = None,
+    edit_plan: list[dict] | None = None,
+) -> dict:
+    """Send a follow-up revision request to an existing Video Agent session.
+
+    Args:
+        api_key: HeyGen API key.
+        session_id: Session ID of a previously generated video.
+        message: Plain-language revision, such as a background music change.
+        voice_id: Optional voice override.
+        edit_plan: Optional scene edits built with `build_scene_edit`; only
+        the named scenes are revised.
+
+    Returns:
+        Response data containing `session_id`, `run_id`, and the draft
+        `video_id`.
+
+    CLARITY pipeline role:
+        Lets a reviewer fix one production detail, such as music or a scene
+        with unsupported on-screen text, while the agent keeps the rest of
+        the approved video.
+    """
+    if not message and not edit_plan:
+        raise HeyGenError("Provide a message or an edit_plan.")
+    payload: dict[str, Any] = {}
+    if message:
+        payload["message"] = message
+    if edit_plan:
+        payload["edit_plan"] = edit_plan
+    if voice_id:
+        payload["voice_id"] = voice_id
+    return heygen_request(api_key, "POST", f"/v3/video-agents/{session_id}", payload=payload)["data"]
+
+
+def get_video_scenes(api_key: str, video_id: str) -> dict:
+    """Return a completed Video Agent video's scenes and its `edit_version`.
+
+    Each scene has an `id`, its `script` (narration), `background`, and
+    `elements`. Scene IDs change on every new draft, so read them fresh from
+    the video being edited.
+    """
+    return heygen_request(api_key, "GET", f"/v3/videos/{video_id}/scenes")["data"]
+
+
+def build_scene_edit(scene_id: str, text: str, snapshot_video_id: str, edit_version: str) -> dict:
+    """Build one `edit_plan` item for `send_video_agent_message`."""
+    return {
+        "scene_id": scene_id,
+        "text": text,
+        "scene_snapshot_video_id": snapshot_video_id,
+        "edit_version": edit_version,
+    }
+
+
 def get_video_agent_session(api_key: str, session_id: str) -> dict:
     """Return the current Video Agent session status and assigned video ID."""
     return heygen_request(api_key, "GET", f"/v3/video-agents/{session_id}")["data"]
@@ -203,12 +266,31 @@ def get_video(api_key: str, video_id: str) -> dict:
     return heygen_request(api_key, "GET", f"/v3/videos/{video_id}")["data"]
 
 
+def awaiting_draft_approval(session: dict) -> str | None:
+    """Return the draft resource ID when the agent is paused for draft review.
+
+    After scene edits, the Video Agent can post a draft preview and ask
+    "Ready to go?" instead of rendering. The session then stays
+    `generating` with a `pending` video until someone replies.
+    """
+    messages = session.get("messages") or []
+    if not messages:
+        return None
+    latest = messages[0]
+    if latest.get("role") != "model":
+        return None
+    drafts = [rid for rid in latest.get("resource_ids") or [] if str(rid).startswith("draft_")]
+    return drafts[0] if drafts else None
+
+
 def wait_for_video(
     api_key: str,
     session_id: str,
     poll_interval_seconds: int = 60,
     timeout_seconds: int = 60 * 60,
     log: Callable[[str], None] = print,
+    previous_video_id: str | None = None,
+    on_draft_ready: Callable[[str], bool] | None = None,
 ) -> dict:
     """Poll a Video Agent session until its video completes or fails.
 
@@ -218,6 +300,12 @@ def wait_for_video(
         poll_interval_seconds: Delay between status checks.
         timeout_seconds: Maximum total wait before raising.
         log: Function used to report status changes.
+        previous_video_id: After a revision request, the already-completed
+        video ID to ignore until the session assigns a new one.
+        on_draft_ready: Called once with the draft video ID when the agent
+        pauses for draft review (common after scene edits). Return True after
+        checking the draft to send approval and start the final render;
+        return False to stop waiting and raise.
 
     Returns:
         The completed video object, including `video_url` and `subtitle_url`.
@@ -229,12 +317,39 @@ def wait_for_video(
     """
     deadline = time.monotonic() + timeout_seconds
     last_status = None
+    handled_drafts: set[str] = set()
     while True:
         session = get_video_agent_session(api_key, session_id)
+        draft_id = awaiting_draft_approval(session)
+        if draft_id and draft_id not in handled_drafts:
+            handled_drafts.add(draft_id)
+            log(f"[{session_id}] agent is waiting for draft approval ({draft_id})")
+            if on_draft_ready is None or not on_draft_ready(session.get("video_id") or ""):
+                raise HeyGenError(
+                    f"Session {session_id} is waiting for draft approval ({draft_id}); "
+                    "review the draft, then approve it with send_video_agent_message."
+                )
+            send_video_agent_message(
+                api_key,
+                session_id,
+                message="The draft is approved. Please proceed with the final video generation now, "
+                "keeping every narration line exactly as in the draft.",
+            )
+            log(f"[{session_id}] draft approved; final render requested")
         if session.get("status") == "failed":
-            raise HeyGenError(f"Video Agent session {session_id} failed: {session}")
+            # The session-level error can be misleading (for example
+            # `free_tier_quota_exceeded` when the wallet balance is too low),
+            # so report the video's own failure code when one exists.
+            detail = session.get("error")
+            failed_video_id = session.get("video_id")
+            if failed_video_id and failed_video_id != previous_video_id:
+                failed_video = get_video(api_key, failed_video_id)
+                detail = f"{failed_video.get('failure_code')} - {failed_video.get('failure_message')}"
+            raise HeyGenError(f"Video Agent session {session_id} failed: {detail}")
 
         video_id = session.get("video_id")
+        if video_id == previous_video_id:
+            video_id = None
         if video_id:
             video = get_video(api_key, video_id)
             status = f"video {video_id}: {video.get('status')}"
@@ -328,6 +443,182 @@ def markdown_dialogue_to_video_source(markdown_text: str) -> str:
     return "\n\n".join(blocks)
 
 
+def structured_script_to_video_source(script: dict) -> str:
+    """Convert a structured script JSON into a scene-by-scene video source.
+
+    Args:
+        script: Either a Stage 3 script (`script_sections` with `narration`
+        and `visual_plan`) or a hand-revised scene script (`scenes` with
+        `narration`, `visual_prompt`, and `minimal_on_screen_text`).
+
+    Returns:
+        Plain text in the `Scene N: title` / `Voiceover:` layout used by
+        Stage 5. Narration is copied verbatim; checklists, fact lists, and
+        audit fields are dropped because HeyGen should not see them.
+
+    CLARITY pipeline role:
+        Gives Stage 5 a deterministic path from an approved script to the
+        video prompt, so no LLM rewrite happens between the audited narration
+        and the narration HeyGen reads.
+    """
+    brief = []
+    if script.get("overall_voice") or script.get("overall_tone"):
+        brief.append(f"Narration voice: {script.get('overall_voice') or script.get('overall_tone')}")
+    if script.get("visual_safety_constraints"):
+        brief.append("Visual rules: " + " ".join(script["visual_safety_constraints"]))
+
+    blocks = ["VIDEO STYLE BRIEF\n" + "\n".join(brief)] if brief else []
+    scenes = script.get("scenes") or script.get("script_sections") or []
+    for number, scene in enumerate(scenes, start=1):
+        title = scene.get("section_label") or scene.get("section_title") or ""
+        visual_plan = scene.get("visual_plan") or {}
+        visual = scene.get("visual_prompt") or " ".join(
+            part
+            for part in (visual_plan.get("main_visual"), visual_plan.get("motion_or_transition"))
+            if part
+        )
+        on_screen = scene.get("minimal_on_screen_text") or visual_plan.get(
+            "minimal_on_screen_text"
+        )
+        lines = [f"Scene {number}: {title}".rstrip(": "), "Voiceover:", scene["narration"].strip()]
+        if visual:
+            lines += ["Visual direction:", visual.strip()]
+        if on_screen:
+            lines += ["Minimal on-screen text:", str(on_screen).strip()]
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+def limit_scenes(video_source: str, max_scenes: int | None) -> str:
+    """Keep the preamble and only the first `max_scenes` scenes of a source.
+
+    CLARITY pipeline role:
+        Supports short, low-cost HeyGen test renders of the same approved
+        script before committing credits to the full-length video.
+    """
+    if not max_scenes:
+        return video_source
+    parts = re.split(r"(?im)^(?=[ \t]*\**[ \t]*scene[ \t]+\d+)", video_source)
+    preamble, scenes = parts[0], parts[1:]
+    return (preamble + "".join(scenes[:max_scenes])).strip()
+
+
+def parse_scenes(video_source: str) -> tuple[str, list[dict]]:
+    """Split a scene-by-scene source into its preamble and structured scenes.
+
+    Returns:
+        A tuple of `(preamble, scenes)`, where each scene has `title`,
+        `voiceover`, `visual`, and `on_screen` text.
+    """
+    fields = {
+        "voiceover": "voiceover",
+        "visual direction": "visual",
+        "minimal on-screen text": "on_screen",
+        "on-screen text": "on_screen",
+    }
+    preamble: list[str] = []
+    scenes: list[dict] = []
+    field = None
+    for raw_line in video_source.splitlines():
+        label = _normalize_label(raw_line)
+        lower = label.lower()
+        if re.match(r"^scene\s+\d+", lower):
+            title = label.split(":", 1)[1].strip() if ":" in label else ""
+            scenes.append({"title": title, "voiceover": [], "visual": [], "on_screen": []})
+            field = None
+            continue
+        matched = next((key for key in fields if lower.startswith(key + ":") or lower == key), None)
+        if scenes and matched:
+            field = fields[matched]
+            remainder = label.split(":", 1)[1].strip() if ":" in label else ""
+            if remainder:
+                scenes[-1][field].append(remainder)
+            continue
+        if not scenes:
+            preamble.append(raw_line)
+        elif field and raw_line.strip():
+            scenes[-1][field].append(raw_line.strip())
+    for scene in scenes:
+        for key in ("voiceover", "visual", "on_screen"):
+            scene[key] = " ".join(scene[key])
+    return "\n".join(preamble).strip(), scenes
+
+
+def narration_only_source(video_source: str) -> str:
+    """Return the source with only scene titles and verbatim voiceover.
+
+    CLARITY pipeline role:
+        Keeps long scripts under the Video Agent prompt limit by moving visual
+        directions into an attached PDF while the approved narration stays in
+        the prompt itself, where the agent follows it most closely.
+    """
+    preamble, scenes = parse_scenes(video_source)
+    blocks = [preamble] if preamble else []
+    for number, scene in enumerate(scenes, start=1):
+        heading = f"Scene {number}: {scene['title']}".rstrip(": ")
+        blocks.append(f"{heading}\nVoiceover:\n{scene['voiceover']}")
+    return "\n\n".join(blocks)
+
+
+def _pdf_safe(text: str) -> str:
+    """Map characters outside Latin-1 so the built-in PDF fonts can render them."""
+    replacements = {"→": "->", "←": "<-", "—": "-", "–": "-",
+                    "‘": "'", "’": "'", "“": '"', "”": '"',
+                    "…": "...", "•": "-", "≥": ">=", "≤": "<=", "≠": "is not"}
+    for original, replacement in replacements.items():
+        text = text.replace(original, replacement)
+    return text.encode("latin-1", errors="replace").decode("latin-1")
+
+
+def build_visual_directions_pdf(video_source: str, title: str) -> bytes:
+    """Render every scene's visual direction and on-screen text as a PDF.
+
+    Args:
+        video_source: Scene-by-scene source with Visual direction lines.
+        title: Heading printed at the top of the document.
+
+    Returns:
+        PDF bytes suitable for a Video Agent `files` base64 attachment.
+
+    CLARITY pipeline role:
+        Carries the production-only visual plan for long scripts. Each entry
+        repeats the scene's first narration words so the agent can match the
+        visual to the right spoken line.
+    """
+    from fpdf import FPDF
+
+    _, scenes = parse_scenes(video_source)
+    pdf = FPDF(format="Letter")
+
+    def write(height: float, text: str) -> None:
+        pdf.multi_cell(0, height, _pdf_safe(text), new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 15)
+    write(8, title)
+    pdf.set_font("Helvetica", "", 10)
+    write(
+        5,
+        "Production reference for the video team. Scene numbers match the scenes in the prompt. "
+        "Do not read this document aloud and do not show it on screen.",
+    )
+    pdf.ln(3)
+    for number, scene in enumerate(scenes, start=1):
+        opening = " ".join(scene["voiceover"].split()[:12])
+        pdf.set_font("Helvetica", "B", 11)
+        write(6, f"Scene {number}: {scene['title']}".rstrip(": "))
+        pdf.set_font("Helvetica", "I", 9)
+        write(5, f'Narration starts: "{opening}..."')
+        pdf.set_font("Helvetica", "", 10)
+        if scene["visual"]:
+            write(5, f"Visual: {scene['visual']}")
+        if scene["on_screen"]:
+            write(5, f"On-screen text: {scene['on_screen']}")
+        pdf.ln(2)
+    return bytes(pdf.output())
+
+
 def extract_narration(video_source: str) -> str:
     """Extract only the spoken voice-over text from a scene-by-scene source.
 
@@ -375,12 +666,24 @@ def extract_narration(video_source: str) -> str:
     return "\n\n".join(paragraphs)
 
 
-def estimate_duration_minutes(
+def estimate_duration_seconds(
     narration: str, words_per_minute: int = DEFAULT_WORDS_PER_MINUTE
 ) -> int:
-    """Estimate spoken length in whole minutes from narration word count."""
+    """Estimate spoken length in seconds from narration word count."""
     word_count = len(narration.split())
-    return max(1, math.ceil(word_count / words_per_minute))
+    return max(1, math.ceil(word_count * 60 / words_per_minute))
+
+
+def format_target_duration(seconds: int) -> str:
+    """Describe a target length for the prompt, such as "67-second" or "5-minute".
+
+    CLARITY pipeline role:
+        Short test renders are stated in seconds so HeyGen does not pad a
+        one-minute narration out to a rounded-up whole minute.
+    """
+    if seconds < 120:
+        return f"{seconds}-second"
+    return f"{round(seconds / 60)}-minute"
 
 
 def srt_to_text(srt_text: str) -> str:
@@ -399,19 +702,20 @@ def _words(text: str) -> list[str]:
     return re.findall(r"[\w']+", text.lower())
 
 
-def compare_narration(
-    expected: str, actual: str, pass_threshold: float = 0.95
-) -> dict:
+def compare_narration(expected: str, actual: str) -> dict:
     """Compare approved narration against HeyGen's rendered subtitles.
 
     Args:
         expected: Approved voice-over narration.
         actual: Caption text extracted from the rendered video's SRT file.
-        pass_threshold: Minimum word-sequence similarity for "pass".
 
     Returns:
         A report with the similarity ratio, a pass/needs_review status, and
-        every inserted, deleted, or replaced word span.
+        every inserted, deleted, or replaced word span. The status is "pass"
+        only when the rendered words match the approved words exactly
+        (ignoring case and punctuation). A similarity ratio alone is not
+        used, because one dropped or duplicated sentence, such as a missing
+        list of affected body areas, barely moves the ratio on a long script.
 
     CLARITY pipeline role:
         HeyGen's Video Agent may smooth or rewrite pasted scripts. Because the
@@ -431,11 +735,9 @@ def compare_narration(
         for tag, i1, i2, j1, j2 in matcher.get_opcodes()
         if tag != "equal"
     ]
-    ratio = round(matcher.ratio(), 4)
     return {
-        "status": "pass" if ratio >= pass_threshold else "needs_review",
-        "similarity": ratio,
-        "pass_threshold": pass_threshold,
+        "status": "needs_review" if differences else "pass",
+        "similarity": round(matcher.ratio(), 4),
         "approved_word_count": len(expected_words),
         "rendered_word_count": len(actual_words),
         "differences": differences,

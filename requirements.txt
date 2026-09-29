@@ -3,3 +3,4 @@ python-docx
 python-dotenv
 openai
 anthropic
+fpdf2

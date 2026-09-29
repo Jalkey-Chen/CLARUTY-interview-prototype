@@ -18,10 +18,13 @@ Keep anatomy simple and schematic. Do not show realistic medical imaging, surger
 Do not show uncertain or possible findings as if they were confirmed.
 Clean title cards and short summary cards are welcome for transitions, but most scenes should be diagrams, not bullet slides.
 Keep on-screen text to a short phrase per scene. Do not put the full narration on screen.
+On-screen text may only use the scene's Minimal on-screen text, words spoken in that scene's narration, or simple diagram labels naming things the narration mentions. Do not invent any other text: no eyebrow labels or category tags (such as "Clinical diagnosis", "Medical report", "Clinical briefing", "Case review", or "Protocol"), no dates, no document or report framing, and no descriptions, claims, or medical terms that the narration does not say.
 Include captions.
 
-Style: Calm Clarity, patient education. Soft white #F7FBFB backgrounds, deep teal #12343B for headings and diagram lines, teal #2B7A78 for highlights and arrows, muted slate #526B73 for secondary text, and a gentle amber #E9C46A only to mark items that still need follow-up. Rounded, friendly sans-serif type. Flat, uncluttered vector diagrams with generous white space. Elements draw on or fade in as the narration mentions them, and arrows and highlights guide attention to one thing at a time. Transitions are soft crossfades. Pacing is unhurried, with a brief pause between scenes. Soft, low-volume ambient music under the narration. The overall feeling is calm, respectful, and clear.
+Style: Calm Clarity, patient education. Soft white #F7FBFB backgrounds, deep teal #12343B for headings and diagram lines, teal #2B7A78 for highlights and arrows, muted slate #526B73 for secondary text, and a gentle amber #E9C46A only to mark items that still need follow-up. Rounded, friendly sans-serif type. Flat, uncluttered vector diagrams with generous white space. Elements draw on or fade in as the narration mentions them, and arrows and highlights guide attention to one thing at a time. Transitions are soft crossfades. Pacing is unhurried, with a brief pause between scenes. The overall feeling is calm, respectful, and clear.
 
+Music: {{MUSIC_DIRECTION}}
+{{VISUAL_ATTACHMENT_NOTE}}
 Script:
 
 {{VIDEO_SOURCE}}
