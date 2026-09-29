@@ -22,6 +22,8 @@ Audit rules:
    - Does it address the patient directly?
    - Does it avoid clinician-to-clinician case language?
    - Does it explain medical terms appropriately for the version?
+   - Does it talk about the patient's situation rather than narrate the source document? Flag every line such as "the note says," "the note describes," "in this note," "according to the record," or "the team notes." One brief mention of where the information comes from near the opening, and once in the closing reminder, is acceptable. Do not flag source attribution that the version-specific requirements explicitly ask for.
+   - Does it refer to the clinicians consistently as "your care team" and speak as an explainer, not as part of the care team ("we recommend," "our team")?
 
 3. Check uncertainty handling.
    - Are all required uncertainties preserved?
@@ -58,6 +60,8 @@ Return JSON using this structure:
   "patient_facing_quality": {
     "pass": false,
     "third_person_or_case_presentation_language": [],
+    "source_document_narration": [],
+    "care_team_naming_or_narrator_stance_issues": [],
     "jargon_without_explanation": [],
     "tone_issues": []
   },

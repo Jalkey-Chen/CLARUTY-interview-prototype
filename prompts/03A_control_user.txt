@@ -11,14 +11,14 @@ Version requirements:
 
 The script should:
 - Address the patient directly using "you" and "your."
-- Explain the medical note in a calm and organized way.
+- Explain the patient's diagnosis, test results, treatment plan, and open questions in a calm and organized way, speaking about the patient's situation rather than about the note.
 - Follow the explanation sequence from the approved explanation plan.
 - Include every item listed in required_for_all_versions.
 - Preserve every uncertainty listed in uncertainties_to_preserve.
 - Explain relevant medical terms from medical_terms_to_explain.
 - Avoid adding medical information beyond the fact base.
 - Avoid telling the patient what treatment to choose.
-- Include a gentle statement that this video helps explain the note but does not replace the care team.
+- Include a gentle closing statement that this video helps explain the patient's recent results and plan but does not replace their care team.
 
 Visual requirements:
 - Do NOT suggest showing doctors, clinicians, nurses, white coats, stethoscopes, or doctor-patient consultation scenes.

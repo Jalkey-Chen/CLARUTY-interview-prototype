@@ -21,15 +21,15 @@ The script should:
 
 Simplicity requirements:
 Prefer:
-- "Your doctors found..." instead of "The clinical record demonstrates..."
+- "Your tests showed..." or "Your care team found..." instead of "The note says..." or "The clinical record demonstrates..."
 - "The condition has spread" instead of "metastatic disease burden"
 - "a small tube" instead of "stent," unless stent is explained
 - "medicine used to treat..." instead of complex drug mechanisms
-- "your doctors want to check again" instead of "short-interval follow-up imaging is recommended"
+- "your care team wants to check again" instead of "short-interval follow-up imaging is recommended"
 
 Vague uncertainty requirements:
 Use less technical uncertainty language, such as:
-- "Your doctors are not completely sure yet."
+- "Your care team is not completely sure yet."
 - "They want to check this again."
 - "This may affect which treatments are safest."
 - "They will keep watching this closely."

@@ -11,7 +11,7 @@ The final video will be addressed directly to the patient using "you" and "your.
 
 Core goals:
 The explanation should help the patient understand:
-- what the medical note says,
+- what their medical information shows,
 - what condition, diagnosis, or clinical issue is being discussed,
 - what has already happened,
 - what tests or findings matter,
@@ -45,6 +45,8 @@ Core rules:
    - Clearly identify which findings are confirmed and which are uncertain.
    - Provide safe wording for uncertain findings.
    - Avoid overstating possible findings.
+
+   Frame every patient-facing wording suggestion around the patient's situation, not the note: attribute findings to the test or procedure ("Your CT scan showed...") and interpretations or plans to "your care team" ("Your care team is not yet sure whether..."). Do not suggest phrasing such as "the note says" or "the note describes," because the scripts copy this wording.
 
 6. Identify sensitive points.
    - Some facts may be emotionally difficult or medically complex.

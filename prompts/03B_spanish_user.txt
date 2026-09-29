@@ -12,18 +12,19 @@ Version requirements:
 
 The script should:
 - Address the patient directly using "usted."
-- Explain the medical note in a calm and organized way.
+- Explain the patient's diagnosis, test results, treatment plan, and open questions in a calm and organized way, speaking about the patient's situation rather than about the note (avoid phrasing such as "la nota dice" or "según la nota").
 - Follow the explanation sequence from the approved explanation plan.
 - Include every item listed in required_for_all_versions.
 - Preserve every uncertainty listed in uncertainties_to_preserve.
 - Explain relevant medical terms from medical_terms_to_explain in Spanish.
 - Avoid adding medical information beyond the fact base.
 - Avoid telling the patient what treatment to choose.
-- Include a gentle statement that this video helps explain the note but does not replace the care team.
+- Include a gentle closing statement that this video helps explain the patient's recent results and plan but does not replace their care team.
 
 Translation requirements:
 - Translate meaning, not just words.
 - Use common Spanish medical terms where appropriate.
+- Refer to the clinicians consistently as "su equipo de atención médica."
 - When a technical term is necessary, explain it simply.
 - Keep uncertainty accurate. Do not make uncertain findings sound confirmed.
 - Do not use culturally loaded assumptions about the patient or family.

@@ -5,10 +5,10 @@ Your task is to generate a patient-facing video explainer script from an approve
 The script is for the patient.
 Address the patient directly using "you" and "your" unless the requested language requires an equivalent patient-facing form.
 Do not write a clinician-to-clinician case presentation.
-Do not refer to "the patient" in the third person unless referring narrowly to how the source note describes something.
+Do not refer to "the patient" in the third person.
 
-The video should help the patient understand their medical note.
-It should not replace their care team's medical advice.
+The video explains the patient's own situation: their diagnosis, what their tests showed, what has been done, the treatment plan, and what is still uncertain.
+It is not a summary of a document, and it should not replace their care team's medical advice.
 
 Global content rules:
 
@@ -18,7 +18,7 @@ Global content rules:
    - Do not add survival statistics.
    - Do not add prognosis estimates.
    - Do not add guideline recommendations.
-   - Do not speculate beyond the note.
+   - Do not speculate beyond the fact base.
    - Do not tell the patient what treatment to choose.
 
 2. Include all required content from the explanation plan.
@@ -33,11 +33,11 @@ Global content rules:
    - Do not turn possible findings into confirmed facts.
    - Do not turn clinician interpretations into absolute facts.
    - Do not remove major uncertainty.
-   - Use wording such as:
-     "Your doctors are not yet sure..."
-     "The note says this may..."
+   - Express uncertainty as medical uncertainty, not as something missing from a document. Use wording such as:
+     "Your care team is not yet sure whether..."
+     "It is not yet clear whether..."
      "Your care team plans to check..."
-     "This is something your doctors are watching..."
+     "This is something your care team is watching..."
    - For the technical version, be more explicit about uncertainty.
    - For the simpler version, use less technical uncertainty language while staying accurate.
 
@@ -51,14 +51,21 @@ Global content rules:
    - Do not imply the patient is responsible for the outcome.
 
 5. Maintain speaker identity.
-   - The narrator is not a doctor.
-   - The narrator should not say "I am your doctor" or imply clinical authority.
-   - The narrator may say "your doctors," "your clinicians," "your oncology team," "your care team," or similar phrases when referring to the clinical note.
-   - The narrator should present the script as an explanation of the note, not as new medical advice.
+   - The narrator is a patient-facing explainer: someone who helps the patient understand their own situation. The narrator is not a doctor and does not speak for the care team.
+   - The narrator should not say "I am your doctor," speak as part of the care team ("we recommend," "our team"), or imply clinical authority.
+   - Refer to the patient's clinicians as "your care team." Do not switch between "your doctors," "your clinicians," "your oncology team," and similar names.
+   - Diagnoses, interpretations, recommendations, and plans belong to the care team ("Your care team recommends..."); the narrator explains them and never makes or changes them.
+
+6. Talk about the patient's situation, not about a document.
+   - The fact base is where the facts come from, but the script should not narrate that source. Do not use phrasing such as "the note says," "the note describes," "the note lists," "the note mentions," "in this note," "according to the record," or "the team notes."
+   - Attribute each fact to its real-world source: the test, scan, biopsy, or procedure for findings ("Your CT scan showed...," "Your biopsy confirmed..."), and your care team for interpretations, recommendations, and plans ("Your care team has staged the cancer as...," "Your care team recommends...").
+   - When the fact base does not answer something the patient may wonder about, point them to the care team ("Your care team can tell you more about...") instead of saying the information is not stated.
+   - One brief mention of where this information comes from is allowed near the opening, for example: "This video walks you through the results and plan from your recent visit." The closing reminder that the video does not replace the care team may mention it once more. Do not refer to the source anywhere else.
+   - If the version-specific requirements explicitly ask for source or evidence attribution, follow those requirements for that version.
 
 Global visual representation and explainer design rules:
 
-6. The video must NOT visually depict doctors, clinicians, nurses, hospital staff, or medical authority figures.
+7. The video must NOT visually depict doctors, clinicians, nurses, hospital staff, or medical authority figures.
 
 Do not suggest:
    - a doctor speaking to camera,
@@ -72,14 +79,14 @@ Do not suggest:
    - a hospital room with identifiable clinicians,
    - hands holding a clipboard in a way that implies clinician authority.
 
-7. The video should feel like a hybrid patient explainer: clean slide-like clarity plus meaningful visuals.
+8. The video should feel like a hybrid patient explainer: clean slide-like clarity plus meaningful visuals.
    - Slide-like layouts are allowed when they help comprehension, especially for section transitions, key terms, treatment steps, and brief summaries.
    - Bullet points are allowed when they clarify key terms, treatment steps, or summary sections.
    - However, the entire video should not become a sequence of text-only bullet slides.
    - On-screen text may be used, but it should support the narration rather than repeat the full narration.
    - Avoid long paragraphs, dense medical notes, repeated title-plus-bullet screens, and large blocks of subtitles as the main visual.
 
-8. When a section explains anatomy, disease or problem location, symptom mechanism, treatment sequence, monitoring, or uncertainty, prefer adding at least one simple visual mechanism alongside any text.
+9. When a section explains anatomy, disease or problem location, symptom mechanism, treatment sequence, monitoring, or uncertainty, prefer adding at least one simple visual mechanism alongside any text.
    Useful non-clinician visual mechanisms include:
    - simplified anatomy map,
    - body-location diagram,
@@ -95,7 +102,7 @@ Do not suggest:
    - neutral icons connected by arrows,
    - simple highlighting, zoom-ins, and pathway diagrams.
 
-9. For every script section, provide a structured visual_plan with:
+10. For every script section, provide a structured visual_plan with:
    - visual_type,
    - main_visual,
    - motion_or_transition,
@@ -136,7 +143,7 @@ When a section involves:
    - uncertainty, use an uncertainty branch;
    - patient questions, use a small set of question cards rather than a dense list.
 
-10. Visual suggestions must be safe for automated video generation.
+11. Visual suggestions must be safe for automated video generation.
    - Do not include identifiable real people.
    - Do not imply a real doctor is endorsing the message.
    - Do not use visuals that could be mistaken for a clinician giving direct medical advice.
@@ -145,7 +152,7 @@ When a section involves:
 
 Output rules:
 
-11. Output valid JSON only.
+12. Output valid JSON only.
    - Do not include markdown outside the JSON.
    - Do not include commentary outside the JSON.
    - The narration should be ready to use as spoken video script.
@@ -210,6 +217,7 @@ Return JSON using this structure:
     "avoids_survival_or_prognosis_statistics_unless_in_note": false,
     "avoids_direct_treatment_advice": false,
     "preserves_uncertainty": false,
-    "does_not_claim_narrator_is_doctor": false
+    "does_not_claim_narrator_is_doctor": false,
+    "talks_about_patient_situation_not_the_source_document": false
   }
 }

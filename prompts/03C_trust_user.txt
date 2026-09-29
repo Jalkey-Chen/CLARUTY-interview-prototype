@@ -11,7 +11,7 @@ Version requirements:
 
 The script should:
 - Address the patient directly using "you" and "your."
-- Explain the medical note in a calm and organized way.
+- Explain the patient's diagnosis, test results, treatment plan, and open questions in a calm and organized way, speaking about the patient's situation rather than about the note.
 - Follow the explanation sequence from the approved explanation plan.
 - Include every item listed in required_for_all_versions.
 - Preserve every uncertainty listed in uncertainties_to_preserve.
@@ -28,7 +28,9 @@ The script should communicate that:
 - The patient can use this information to have clearer conversations with the care team.
 
 You may adapt this idea naturally:
-"We are sharing this information because we know you care about your health, and we believe in your ability to make thoughtful decisions with your care team."
+"This information is shared with you because you deserve to understand your health, and you are fully able to make thoughtful decisions with your care team."
+
+Say this without "we" or "our," so the narrator does not sound like part of the care team.
 
 Important boundaries:
 - Do not overpraise the patient.
