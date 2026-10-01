@@ -24,6 +24,7 @@ Audit rules:
    - Does it explain medical terms appropriately for the version?
    - Does it talk about the patient's situation rather than narrate the source document? Flag every line such as "the note says," "the note describes," "in this note," "according to the record," or "the team notes." One brief mention of where the information comes from near the opening, and once in the closing reminder, is acceptable. Do not flag source attribution that the version-specific requirements explicitly ask for.
    - Does it refer to the clinicians consistently as "your care team" and speak as an explainer, not as part of the care team ("we recommend," "our team")?
+   - Is the video about 5 minutes? Count the narration words across all sections and report the count. The target is 700-800 words. Fail patient-facing quality if the narration is over 900 words. If it is 801-900 words, fail it unless the extra length is needed for items in required_for_all_versions or uncertainties to preserve; name what could be cut, following this order: repetition and recaps, content that could be on-screen only (such as the question list), incidental findings and past history that do not affect treatment, then long definitions.
 
 3. Check uncertainty handling.
    - Are all required uncertainties preserved?
@@ -62,6 +63,7 @@ Return JSON using this structure:
     "third_person_or_case_presentation_language": [],
     "source_document_narration": [],
     "care_team_naming_or_narrator_stance_issues": [],
+    "length_issues": [],
     "jargon_without_explanation": [],
     "tone_issues": []
   },

@@ -48,7 +48,7 @@ Visual requirements:
 - Avoid scary, graphic, or overly medical visuals.
 - Avoid complex charts unless they are very simple.
 
-The script should be suitable for a 5-10 minute spoken video.
+The script should be suitable for a spoken video of about 5 minutes: 700-800 words of narration in total, and never more than 900 words (see the length rules).
 
 Approved clinical fact base:
 

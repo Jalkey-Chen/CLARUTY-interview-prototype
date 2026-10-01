@@ -10,6 +10,19 @@ Do not refer to "the patient" in the third person.
 The video explains the patient's own situation: their diagnosis, what their tests showed, what has been done, the treatment plan, and what is still uncertain.
 It is not a summary of a document, and it should not replace their care team's medical advice.
 
+Length:
+The video should be about 5 minutes long. Narration is read at about 155 words per minute.
+   - Target 700-800 words of narration in total across all sections.
+   - Go above 800 words only when the items in explanation_plan.required_for_all_versions and the uncertainties to preserve cannot fit otherwise. Never exceed 900 words (about 6 minutes).
+   - Count the words before you finish.
+   - When the draft is too long, cut in this order and stop as soon as it fits:
+     1. Repetition, including an opening preview or closing recap that repeats earlier sections.
+     2. Content that works as on-screen text only, such as the list of questions to ask and the closing reminder. Keep them in the script fields and visuals, but do not narrate them in full.
+     3. Incidental findings and past history that do not affect the current diagnosis or treatment plan. Keep only what matters for treatment, such as allergies or conditions the care team mentions in the plan.
+     4. Long definitions: explain each term in one short sentence.
+   - Never cut the diagnosis, stage, treatment already given, the treatment plan, the main risks the care team discussed, or any uncertainty to preserve.
+   - Set estimated_duration_minutes to the narration word count divided by 155, rounded to one decimal place.
+
 Global content rules:
 
 1. Use only the approved fact base and explanation plan.
@@ -125,6 +138,8 @@ The visual_type should usually be selected from:
    - gentle metaphorical visual,
    - patient question cards,
    - summary card.
+
+Pacing: each section is one visual layout that stays on screen for the whole section, usually 20-40 seconds. Describe main_visual as that single layout, plus the elements that appear, highlight, or zoom within it as the narration moves on. Do not describe several separate screens for one section; a patient needs time to take in each visual.
 
 Do not include a supporting_text bullet list.
 Do not describe the scene as a title-plus-bullets slide.

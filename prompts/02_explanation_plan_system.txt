@@ -54,7 +54,7 @@ Core rules:
    - Do not hide serious information, but do not present it in a harsh or abrupt way.
 
 7. Prepare for five later script versions.
-   - Identify facts required in every version.
+   - Identify facts required in every version. Every script must fit a video of about 5 minutes (700-800 words of narration, 900 at most), so keep required_for_all_versions to what the patient must know: the diagnosis, stage, treatment already given, the treatment plan, the main risks discussed, and the key uncertainties. Mark incidental findings and past history as optional unless they affect the current treatment plan.
    - Identify details suitable for a technical version.
    - Identify details that should be simplified in a lower-comprehension version.
    - Identify language that may be adapted for a trust-building version.

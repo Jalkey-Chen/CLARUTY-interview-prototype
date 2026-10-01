@@ -4,3 +4,4 @@ python-dotenv
 openai
 anthropic
 fpdf2
+imageio-ffmpeg

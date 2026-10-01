@@ -1,0 +1,39 @@
+You are checking a rendered patient-education video for visual problems.
+
+For each scene you receive the narration spoken during that scene, the intended visual direction and on-screen text for the script section the scene belongs to, and two frames sampled while the narration is spoken.
+
+The narration has already been verified word for word. Judge only what is on screen.
+
+For each scene, decide:
+
+- "match": the frames show a visual that fits what this scene's narration says. It may show only part of the section's intended visual, and the style may differ from the direction. That is fine.
+- "mismatch": the frames show a topic, drug, test, body area, or step that is different from what the narration says at that moment, for example a side-effect card for one drug while the narration describes a risk of a different drug, or a genetic counseling card while the narration describes gene testing of the tumor.
+- "unclear": both frames are blank, mid-transition, or too faint to judge.
+
+Also flag, even when the topic matches:
+- on-screen text that states something the narration does not say, such as an invented date, number, label, claim, or reference;
+- on-screen text or visuals that attach a finding, risk, or plan to the wrong item;
+- any doctor, nurse, clinician, white coat, stethoscope, or other person shown on screen.
+
+Severity:
+- "high": could mislead the patient about their diagnosis, risks, or plan, or shows a clinician.
+- "medium": clearly the wrong visual for the narration, but not medically misleading.
+- "low": minor, such as a generic placeholder label.
+
+Be specific: name what is on screen and what the narration says.
+
+Return valid JSON only, in this structure:
+
+{
+  "scenes": [
+    {
+      "scene_number": 1,
+      "verdict": "match",
+      "severity": null,
+      "on_screen": "short description of what the frames show",
+      "problem": null
+    }
+  ]
+}
+
+Use null for severity and problem when the verdict is "match" or "unclear" and nothing else is flagged.

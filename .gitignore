@@ -15,6 +15,7 @@ env/
 # Keep local clinical Word notes out of git by default. Even de-identified
 # documents should be intentionally reviewed before sharing.
 data/*.docx
+data/pilot_cases/
 
 # Keep source-controlled placeholder directories, but avoid committing large generated media by default.
 videos/*.mp4

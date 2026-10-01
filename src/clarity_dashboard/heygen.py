@@ -1,7 +1,8 @@
 """HeyGen Video Agent helpers for the CLARITY Stage 5 video pipeline.
 
 This module uses the Python standard library (plus `fpdf2`, imported only when
-a visual-directions PDF is built) and does not import Streamlit, so the
+a visual-directions PDF is built, and `imageio-ffmpeg`, imported only when
+frames are extracted for the visual check) and does not import Streamlit, so the
 experiment notebook can use it directly and the source-text helpers can be
 tested without network access or API keys.
 """
@@ -23,7 +24,8 @@ from typing import Any, Callable
 HEYGEN_API_BASE = "https://api.heygen.com"
 HEYGEN_PROMPT_MAX_CHARS = 10_000
 HEYGEN_REQUEST_TIMEOUT_SECONDS = 60
-DEFAULT_WORDS_PER_MINUTE = 140
+# Measured on rendered Video Agent narration: 157 words in 58 s, 655 words in 255 s.
+DEFAULT_WORDS_PER_MINUTE = 155
 
 
 class HeyGenError(RuntimeError):
@@ -344,7 +346,13 @@ def wait_for_video(
             failed_video_id = session.get("video_id")
             if failed_video_id and failed_video_id != previous_video_id:
                 failed_video = get_video(api_key, failed_video_id)
-                detail = f"{failed_video.get('failure_code')} - {failed_video.get('failure_message')}"
+                if failed_video.get("failure_code") or failed_video.get("failure_message"):
+                    detail = f"{failed_video.get('failure_code')} - {failed_video.get('failure_message')}"
+            if isinstance(detail, dict) and detail.get("code") == "free_tier_quota_exceeded":
+                detail = (
+                    f"{detail}. HeyGen also reports this when the wallet balance cannot cover the render; "
+                    "check GET /v3/users/me before assuming a plan quota."
+                )
             raise HeyGenError(f"Video Agent session {session_id} failed: {detail}")
 
         video_id = session.get("video_id")
@@ -695,6 +703,150 @@ def srt_to_text(srt_text: str) -> str:
             continue
         lines.append(line)
     return " ".join(lines)
+
+
+def parse_srt(srt_text: str) -> list[tuple[float, float, str]]:
+    """Return `(start_seconds, end_seconds, text)` for every SRT caption cue."""
+
+    def seconds(stamp: str) -> float:
+        hours, minutes, rest = stamp.strip().replace(",", ".").split(":")
+        return int(hours) * 3600 + int(minutes) * 60 + float(rest)
+
+    cues = []
+    for block in srt_text.lstrip("﻿").strip().split("\n\n"):
+        lines = [line for line in block.splitlines() if line.strip()]
+        timing = next((line for line in lines if "-->" in line), None)
+        if not timing:
+            continue
+        start, end = timing.split("-->")
+        text = " ".join(lines[lines.index(timing) + 1 :])
+        cues.append((seconds(start), seconds(end), text))
+    return cues
+
+
+def scene_time_ranges(scene_texts: list[str], srt_text: str) -> list[tuple[float, float]]:
+    """Estimate when each scene is on screen from the rendered subtitles.
+
+    Args:
+        scene_texts: Each scene's narration, in order.
+        srt_text: The rendered video's SRT subtitles.
+
+    Returns:
+        One `(start_seconds, end_seconds)` pair per scene.
+
+    CLARITY pipeline role:
+        Captions carry timing but not scene boundaries. Spreading each cue's
+        duration over its words and then walking the scenes' word counts
+        gives each scene's time range, so frames can be sampled while that
+        scene's narration is being spoken.
+    """
+    word_times: list[float] = []
+    for start, end, text in parse_srt(srt_text):
+        words = _words(text)
+        for index in range(len(words)):
+            word_times.append(start + (end - start) * index / max(1, len(words)))
+    if not word_times:
+        raise ValueError("The subtitles contain no words.")
+    ranges = []
+    position = 0
+    for text in scene_texts:
+        count = max(1, len(_words(text)))
+        first = min(position, len(word_times) - 1)
+        last = min(position + count, len(word_times)) - 1
+        end = word_times[last + 1] if last + 1 < len(word_times) else word_times[-1] + 1.0
+        ranges.append((word_times[first], max(end, word_times[first] + 0.5)))
+        position += count
+    return ranges
+
+
+def extract_frame(video_path: Path, seconds: float, destination: Path, width: int = 640) -> Path:
+    """Save one JPEG frame from a video at the given time (requires imageio-ffmpeg)."""
+    import subprocess
+
+    import imageio_ffmpeg
+
+    subprocess.run(
+        [
+            imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error",
+            "-ss", f"{seconds:.2f}", "-i", str(video_path),
+            "-frames:v", "1", "-vf", f"scale={width}:-1", str(destination),
+        ],
+        check=True,
+    )
+    return destination
+
+
+def detect_layout_changes(
+    video_path: Path,
+    fps: int = 2,
+    active_level: float = 3.0,
+    change_level: float = 5.5,
+) -> list[float]:
+    """Return the times, in seconds, where the picture changes to a new layout.
+
+    Frames are sampled at `fps`, shrunk to 160x90 grayscale, and each frame is
+    compared with the frame one second earlier (mean absolute pixel
+    difference, 0-255). A run of frames above `active_level` is one change,
+    and it counts as a new layout when its peak reaches `change_level`.
+
+    Calibrated on Video Agent output: its soft crossfades on pale backgrounds
+    do not trigger ffmpeg's built-in scene detection, while an element fading
+    in within one layout typically scores 2-4 and a new full-screen layout
+    scores above 5.5.
+    """
+    import subprocess
+
+    import imageio_ffmpeg
+
+    width, height = 160, 90
+    raw = subprocess.run(
+        [
+            imageio_ffmpeg.get_ffmpeg_exe(), "-loglevel", "error", "-i", str(video_path),
+            "-vf", f"fps={fps},scale={width}:{height},format=gray", "-f", "rawvideo", "-",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout
+    size = width * height
+    frames = [raw[i : i + size] for i in range(0, len(raw) - size + 1, size)]
+    changes: list[float] = []
+    run_peak, run_peak_time = 0.0, 0.0
+    for index in range(fps, len(frames) + 1):
+        if index < len(frames):
+            current, earlier = frames[index], frames[index - fps]
+            difference = sum(abs(a - b) for a, b in zip(current, earlier)) / size
+        else:
+            difference = 0.0  # flush a run that reaches the end of the video
+        if difference > active_level:
+            if difference > run_peak:
+                run_peak, run_peak_time = difference, index / fps
+        elif run_peak:
+            if run_peak >= change_level:
+                changes.append(run_peak_time)
+            run_peak = 0.0
+    return changes
+
+
+def pacing_report(change_times: list[float], duration: float, short_hold_seconds: float = 4.0) -> dict:
+    """Summarize how long each layout stays on screen.
+
+    CLARITY pipeline role:
+        A patient needs time to take in each visual. This deterministic check
+        flags videos that cut to a new graphic every few seconds, which the
+        per-scene visual check cannot see.
+    """
+    edges = [0.0] + sorted(t for t in change_times if 0 < t < duration) + [duration]
+    holds = [round(b - a, 1) for a, b in zip(edges, edges[1:]) if b - a > 0.2]
+    holds_sorted = sorted(holds)
+    return {
+        "duration_seconds": round(duration, 1),
+        "layout_changes": len(edges) - 2,
+        "changes_per_minute": round((len(edges) - 2) / (duration / 60), 1) if duration else 0,
+        "median_hold_seconds": holds_sorted[len(holds_sorted) // 2] if holds_sorted else duration,
+        "holds_under_seconds": short_hold_seconds,
+        "short_holds": sum(1 for hold in holds if hold < short_hold_seconds),
+        "holds": holds,
+    }
 
 
 def _words(text: str) -> list[str]:
